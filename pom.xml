@@ -7,7 +7,7 @@
 		<relativePath />
 	</parent>
 	<groupId>de.malkusch.ha</groupId>
-	<artifactId>ha</artifactId>
+	<artifactId>monitoring</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<properties>
 		<java.version>16</java.version>
@@ -52,7 +52,7 @@
 		</dependency>
 	</dependencies>
 	<build>
-		<finalName>homeautomation</finalName>
+		<finalName>homeautomation-monitoring</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
