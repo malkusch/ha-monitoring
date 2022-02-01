@@ -1,0 +1,26 @@
+logging.level.de.malkusch.ha.shared.infrastructure.buderus: INFO
+buderus:
+   salt: 867845e97c4e29dce522b9a7d3a3e07b152bffadddbed7f5ffd842e9895ad1e4
+   queryRate: PT1m
+   timeout: PT10s
+monitoring:
+   enabled: true
+   updateRate: PT15s
+   timeout: PT3S
+   retries: 2
+   mqtt:
+      solarTest:
+         topic: solarTest
+      kueche:
+         topic: test
+mqtt:
+   host: example.org
+   port: 8883
+   user: user
+   password: secret
+http:
+   timeout: PT10S
+   userAgent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36
+   retry:
+      delay: PT5S
+      retries: 10

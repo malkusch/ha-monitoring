@@ -1,0 +1,30 @@
+logging.level.de.malkusch: DEBUG
+mqtt:
+   host: example.org
+   port: 8883
+   user: user
+   password: secret
+buderus:
+   gatewayPassword: 1234-1234-1234-1234
+   privatePassword: 1234
+   host: http://heizung
+sonnen:
+   url: http://192.168.0.2:8080/api/v1/status
+monitoring:
+   inverter: http://inverter/solar_api/v1/GetPowerFlowRealtimeData.fcgi
+   dust:
+   -  name: feinstaub
+      url: http://feinstaub/
+   -  name: aussen
+      url: http://aussen/
+   sensors:
+   -  name: bad
+      url: http://bad/
+   -  name: keller
+      url: http://klima1/
+   -  name: keller2
+      url: http://xxx/
+   -  name: klima3
+      url: http://klima3/
+   -  name: co2
+      url: http://co2/

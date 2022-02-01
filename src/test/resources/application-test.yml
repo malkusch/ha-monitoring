@@ -1,0 +1,53 @@
+spring.main.allow-bean-definition-overriding: true
+logging.level.de.malkusch: DEBUG
+prometheus:
+   url: http://localhost:9090
+dehumidifier:
+   tasmota:
+   -  name: keller
+      power: 250
+      url: http://tasmota-1
+shutters:
+   shelly:
+      url: https://shelly-31-eu.shelly.cloud
+      key: 123abc
+      shutters:
+      -  id: KUECHENTUER
+         device-id: 123abc
+      blinds:
+      -  id: WOHNZIMMER_KLEIN
+         device-id: 456
+buderus:
+   gatewayPassword: 1234-1234-1234-1234
+   privatePassword: 1234
+   host: http://heizung
+location:
+   latitude: 12.3
+   longitude: 45.6
+open-weather:
+   api-key: 123abc
+sonnen:
+   url: http://192.168.0.2:8080/api/v1/status
+monitoring:
+   enabled: false
+   inverter: http://inverter/solar_api/v1/GetPowerFlowRealtimeData.fcgi
+   dust:
+   -  name: feinstaub
+      url: http://feinstaub/
+   -  name: aussen
+      url: http://aussen/
+   sensors:
+   -  name: bad
+      url: http://bad/
+   -  name: keller
+      url: http://klima1/
+   -  name: keller2
+      url: http://xxx/
+   -  name: klima3
+      url: http://klima3/
+   -  name: co2
+      url: http://co2/
+notification:
+   telegram:
+      token: aToken
+      chatId: 1234
