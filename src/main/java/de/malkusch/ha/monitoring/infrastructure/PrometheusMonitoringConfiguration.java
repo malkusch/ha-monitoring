@@ -50,6 +50,7 @@ class PrometheusMonitoringConfiguration {
         static class Mqtt {
             private MqttSensor solarTest;
             private MqttSensor kueche;
+            private MqttSensor aussen;
 
             @Data
             static class MqttSensor {
@@ -143,9 +144,15 @@ class PrometheusMonitoringConfiguration {
     }
 
     @Bean
-    MqttMonitoring<JsonNode> kuecheMonitoring2() {
+    MqttMonitoring<JsonNode> kuecheMonitoring() {
         return mqttMonitoringFactory.build(properties.mqtt.kueche.topic, "/pm10", "/pm2.5", "/co2", "/temperature",
                 "/humidity", "/pressure");
+    }
+
+    @Bean
+    MqttMonitoring<JsonNode> aussenMonitoring() {
+        return mqttMonitoringFactory.build(properties.mqtt.aussen.topic, "/pm10", "/pm2.5", "/temperature", "/humidity",
+                "/pressure");
     }
 
     @Bean

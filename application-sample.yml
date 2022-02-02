@@ -15,8 +15,6 @@ monitoring:
    dust:
    -  name: feinstaub
       url: http://feinstaub/
-   -  name: aussen
-      url: http://aussen/
    sensors:
    -  name: bad
       url: http://bad/

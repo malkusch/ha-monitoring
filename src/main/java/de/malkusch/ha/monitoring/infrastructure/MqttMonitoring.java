@@ -1,6 +1,6 @@
 package de.malkusch.ha.monitoring.infrastructure;
 
-import static com.hivemq.client.mqtt.MqttGlobalPublishFilter.ALL;
+import static com.hivemq.client.mqtt.MqttGlobalPublishFilter.SUBSCRIBED;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.stream;
 import static lombok.AccessLevel.PRIVATE;
@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hivemq.client.mqtt.datatypes.MqttTopic;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 
 import io.prometheus.client.Gauge;
@@ -55,7 +56,10 @@ public class MqttMonitoring<MESSAGE> {
             var poller = new MqttMonitoring<>(fieldPollers);
             mqtt.subscribeWith().topicFilter(topic).send();
 
-            mqtt.toAsync().publishes(ALL, publish -> {
+            mqtt.toAsync().publishes(SUBSCRIBED, publish -> {
+                if (!publish.getTopic().filter().matches(MqttTopic.of(topic))) {
+                    return;
+                }
                 var rawMessage = UTF_8.decode(publish.getPayload().get()).toString();
                 try {
                     var message = messageMapper.map(rawMessage);
