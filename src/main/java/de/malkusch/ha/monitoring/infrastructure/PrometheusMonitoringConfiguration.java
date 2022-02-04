@@ -43,19 +43,12 @@ class PrometheusMonitoringConfiguration {
         private int retries;
         private String inverter;
         private List<Sensor> sensors;
-        private Mqtt mqtt;
+        private List<MqttSensor> mqttSensors;
 
         @Data
-        static class Mqtt {
-            private MqttSensor solarTest;
-            private MqttSensor kueche;
-            private MqttSensor aussen;
-            private MqttSensor feinstaub;
-
-            @Data
-            static class MqttSensor {
-                private String topic;
-            }
+        static class MqttSensor {
+            private String topic;
+            private List<String> metrics;
         }
 
         @Data
@@ -120,30 +113,9 @@ class PrometheusMonitoringConfiguration {
                 new OfflinePoller(new PrometheusProxyPoller(properties.inverter, offlineHttp(), mapper, mappings)));
     }
 
-    private final MqttMonitoring.Factory mqttMonitoringFactory;
-
     @Bean
-    MqttMonitoring<JsonNode> solarEspTestMonitoring() {
-        return mqttMonitoringFactory.build(properties.mqtt.solarTest.topic, "/voltage", "/v0", "/v0_raw",
-                "/temperature", "/humidity", "/pressure");
-    }
-
-    @Bean
-    MqttMonitoring<JsonNode> kuecheMonitoring() {
-        return mqttMonitoringFactory.build(properties.mqtt.kueche.topic, "/pm10", "/pm2.5", "/co2", "/temperature",
-                "/humidity", "/pressure");
-    }
-
-    @Bean
-    MqttMonitoring<JsonNode> aussenMonitoring() {
-        return mqttMonitoringFactory.build(properties.mqtt.aussen.topic, "/pm10", "/pm2.5", "/temperature", "/humidity",
-                "/pressure");
-    }
-
-    @Bean
-    MqttMonitoring<JsonNode> feinstaubMonitoring() {
-        return mqttMonitoringFactory.build(properties.mqtt.feinstaub.topic, "/pm10", "/pm2.5", "/temperature",
-                "/humidity", "/pressure");
+    List<MqttMonitoring<JsonNode>> mqttMonitoring(MqttMonitoring.Factory factory) {
+        return properties.mqttSensors.stream().map(it -> factory.build(it.topic, it.metrics)).toList();
     }
 
     @Bean

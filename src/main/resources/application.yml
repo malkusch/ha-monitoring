@@ -8,15 +8,6 @@ monitoring:
    updateRate: PT15s
    timeout: PT3S
    retries: 2
-   mqtt:
-      solarTest:
-         topic: solarTest
-      kueche:
-         topic: kueche
-      feinstaub:
-         topic: feinstaub
-      aussen:
-         topic: aussen
 mqtt:
    host: example.org
    port: 8883

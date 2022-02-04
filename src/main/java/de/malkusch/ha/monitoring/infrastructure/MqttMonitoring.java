@@ -2,7 +2,7 @@ package de.malkusch.ha.monitoring.infrastructure;
 
 import static com.hivemq.client.mqtt.MqttGlobalPublishFilter.SUBSCRIBED;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Arrays.stream;
+import static java.util.Arrays.asList;
 import static lombok.AccessLevel.PRIVATE;
 
 import java.util.Collection;
@@ -37,7 +37,11 @@ public class MqttMonitoring<MESSAGE> {
         }
 
         public MqttMonitoring<JsonNode> build(String topic, String... paths) {
-            var fieldPollers = stream(paths).map(
+            return build(topic, asList(paths));
+        }
+
+        public MqttMonitoring<JsonNode> build(String topic, Collection<String> paths) {
+            var fieldPollers = paths.stream().map(
                     path -> MessageGauge.<JsonNode> messageGauge(gaugeName(topic, path), it -> it.at(path).asDouble()))
                     .toList();
             return build(topic, (it) -> mapper.readTree(it), fieldPollers);
