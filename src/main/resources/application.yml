@@ -13,6 +13,8 @@ monitoring:
          topic: solarTest
       kueche:
          topic: kueche
+      feinstaub:
+         topic: feinstaub
       aussen:
          topic: aussen
 mqtt:

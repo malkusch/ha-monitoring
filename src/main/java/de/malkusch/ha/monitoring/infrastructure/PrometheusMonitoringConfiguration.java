@@ -42,7 +42,6 @@ class PrometheusMonitoringConfiguration {
         private Duration timeout;
         private int retries;
         private String inverter;
-        private List<Sensor> dust;
         private List<Sensor> sensors;
         private Mqtt mqtt;
 
@@ -51,6 +50,7 @@ class PrometheusMonitoringConfiguration {
             private MqttSensor solarTest;
             private MqttSensor kueche;
             private MqttSensor aussen;
+            private MqttSensor feinstaub;
 
             @Data
             static class MqttSensor {
@@ -120,21 +120,6 @@ class PrometheusMonitoringConfiguration {
                 new OfflinePoller(new PrometheusProxyPoller(properties.inverter, offlineHttp(), mapper, mappings)));
     }
 
-    @Bean
-    List<ScheduledPoller> dust() {
-        return properties.dust.stream().map(it -> {
-            var mappings = asList( //
-                    mapping("/temperature", it.name + "_temperature"), //
-                    mapping("/humidity", it.name + "_humidity"), //
-                    mapping("/pressure", it.name + "_pressure"), //
-                    mapping("/pm10", it.name + "_pm10"), //
-                    mapping("/pm2.5", it.name + "_pm25") //
-            );
-
-            return proxy(it.url, mappings);
-        }).collect(Collectors.toList());
-    }
-
     private final MqttMonitoring.Factory mqttMonitoringFactory;
 
     @Bean
@@ -153,6 +138,12 @@ class PrometheusMonitoringConfiguration {
     MqttMonitoring<JsonNode> aussenMonitoring() {
         return mqttMonitoringFactory.build(properties.mqtt.aussen.topic, "/pm10", "/pm2.5", "/temperature", "/humidity",
                 "/pressure");
+    }
+
+    @Bean
+    MqttMonitoring<JsonNode> feinstaubMonitoring() {
+        return mqttMonitoringFactory.build(properties.mqtt.feinstaub.topic, "/pm10", "/pm2.5", "/temperature",
+                "/humidity", "/pressure");
     }
 
     @Bean

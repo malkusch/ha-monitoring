@@ -12,9 +12,6 @@ sonnen:
    url: http://192.168.0.2:8080/api/v1/status
 monitoring:
    inverter: http://inverter/solar_api/v1/GetPowerFlowRealtimeData.fcgi
-   dust:
-   -  name: feinstaub
-      url: http://feinstaub/
    sensors:
    -  name: bad
       url: http://bad/
