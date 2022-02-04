@@ -12,7 +12,7 @@ monitoring:
       solarTest:
          topic: solarTest
       kueche:
-         topic: test
+         topic: kueche
       aussen:
          topic: aussen
 mqtt:
