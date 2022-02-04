@@ -19,3 +19,5 @@ http:
    retry:
       delay: PT5S
       retries: 10
+state-storage:
+   file: /var/run/ha-monitoring.state

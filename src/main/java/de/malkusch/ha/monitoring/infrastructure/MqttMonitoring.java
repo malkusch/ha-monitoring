@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hivemq.client.mqtt.datatypes.MqttTopic;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 
+import de.malkusch.ha.monitoring.infrastructure.persistence.GaugeFactory;
 import io.prometheus.client.Gauge;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ public class MqttMonitoring<MESSAGE> {
 
         private final ObjectMapper mapper;
         private final Mqtt5BlockingClient mqtt;
+        private final GaugeFactory gaugeFactory;
 
         public <MESSAGE> MqttMonitoring<MESSAGE> build(Class<MESSAGE> type, String topic,
                 Collection<MessageGauge<MESSAGE>> fieldPollers) {
@@ -41,9 +43,12 @@ public class MqttMonitoring<MESSAGE> {
         }
 
         public MqttMonitoring<JsonNode> build(String topic, Collection<String> paths) {
-            var fieldPollers = paths.stream().map(
-                    path -> MessageGauge.<JsonNode> messageGauge(gaugeName(topic, path), it -> it.at(path).asDouble()))
-                    .toList();
+            var fieldPollers = paths.stream().map(path -> {
+                var name = gaugeName(topic, path);
+                var gauge = gaugeFactory.build(name);
+                MessageGauge<JsonNode> messageGauge = new MessageGauge<>(gauge, it -> it.at(path).asDouble());
+                return messageGauge;
+            }).toList();
             return build(topic, (it) -> mapper.readTree(it), fieldPollers);
         }
 
@@ -79,14 +84,6 @@ public class MqttMonitoring<MESSAGE> {
 
     @RequiredArgsConstructor
     static final class MessageGauge<MESSAGE> {
-
-        public static <MESSAGE> MessageGauge<MESSAGE> messageGauge(String name, Function<MESSAGE, Double> fieldMapper) {
-            var help = name;
-            var gauge = Gauge.build().name(name).help(help).create();
-            gauge.register();
-
-            return new MessageGauge<>(gauge, fieldMapper);
-        }
 
         private final Gauge gauge;
 
