@@ -47,8 +47,14 @@ class PrometheusMonitoringConfiguration {
 
         @Data
         static class MqttSensor {
+            private String name;
             private String topic;
             private List<String> metrics;
+
+            public String topic() {
+                return topic == null ? name : topic;
+            }
+
         }
 
         @Data
@@ -115,7 +121,7 @@ class PrometheusMonitoringConfiguration {
 
     @Bean
     List<MqttMonitoring<JsonNode>> mqttMonitoring(MqttMonitoring.Factory factory) {
-        return properties.mqttSensors.stream().map(it -> factory.build(it.topic, it.metrics)).toList();
+        return properties.mqttSensors.stream().map(it -> factory.build(it.name, it.topic(), it.metrics)).toList();
     }
 
     @Bean

@@ -13,7 +13,7 @@ sonnen:
 monitoring:
    inverter: http://inverter/solar_api/v1/GetPowerFlowRealtimeData.fcgi
    mqtt-sensors:
-   - topic: feinstaub
+   - name: feinstaub
      metrics: [/pm10, /pm2.5, /temperature, /humidity, /pressure]
    sensors:
    -  name: bad

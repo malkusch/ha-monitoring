@@ -38,14 +38,13 @@ public class MqttMonitoring<MESSAGE> {
             return build(topic, (it) -> mapper.readValue(it, type), fieldPollers);
         }
 
-        public MqttMonitoring<JsonNode> build(String topic, String... paths) {
-            return build(topic, asList(paths));
+        public MqttMonitoring<JsonNode> build(String name, String topic, String... paths) {
+            return build(name, topic, asList(paths));
         }
 
-        public MqttMonitoring<JsonNode> build(String topic, Collection<String> paths) {
+        public MqttMonitoring<JsonNode> build(String name, String topic, Collection<String> paths) {
             var fieldPollers = paths.stream().map(path -> {
-                var name = gaugeName(topic, path);
-                var gauge = gaugeFactory.build(name);
+                var gauge = gaugeFactory.build(gaugeName(name, path));
                 MessageGauge<JsonNode> messageGauge = new MessageGauge<>(gauge, it -> it.at(path).asDouble());
                 return messageGauge;
             }).toList();
