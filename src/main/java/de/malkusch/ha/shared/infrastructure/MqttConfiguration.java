@@ -30,7 +30,7 @@ class MqttConfiguration {
     @Bean
     public Mqtt5BlockingClient mqtt(Properties properties) {
         var client = MqttClient.builder().useMqttVersion5().serverHost(properties.host).serverPort(properties.port)
-                .sslWithDefaultConfig().buildBlocking();
+                .automaticReconnectWithDefaultConfig().sslWithDefaultConfig().buildBlocking();
 
         client.connectWith().simpleAuth().username(properties.user).password(UTF_8.encode(properties.password))
                 .applySimpleAuth().send();
