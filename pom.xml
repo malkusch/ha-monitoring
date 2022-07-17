@@ -10,7 +10,7 @@
 	<artifactId>monitoring</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<properties>
-		<java.version>16</java.version>
+		<java.version>17</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
