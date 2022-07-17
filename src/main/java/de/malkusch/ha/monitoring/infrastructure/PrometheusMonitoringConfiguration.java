@@ -5,6 +5,7 @@ import static java.time.Duration.ZERO;
 import static java.util.Arrays.asList;
 import static org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_PROTOTYPE;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
@@ -121,7 +122,13 @@ class PrometheusMonitoringConfiguration {
 
     @Bean
     List<MqttMonitoring<JsonNode>> mqttMonitoring(MqttMonitoring.Factory factory) {
-        return properties.mqttSensors.stream().map(it -> factory.build(it.name, it.topic(), it.metrics)).toList();
+        return properties.mqttSensors.stream().map(it -> {
+            try {
+                return factory.build(it.name, it.topic(), it.metrics);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }).toList();
     }
 
     @Bean

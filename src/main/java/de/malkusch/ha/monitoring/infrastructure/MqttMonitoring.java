@@ -1,10 +1,9 @@
 package de.malkusch.ha.monitoring.infrastructure;
 
-import static com.hivemq.client.mqtt.MqttGlobalPublishFilter.SUBSCRIBED;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 import static lombok.AccessLevel.PRIVATE;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.function.Function;
 
@@ -12,16 +11,13 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hivemq.client.mqtt.datatypes.MqttTopic;
-import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 
 import de.malkusch.ha.monitoring.infrastructure.persistence.GaugeFactory;
+import de.malkusch.ha.shared.infrastructure.mqtt.Mqtt;
 import io.prometheus.client.Gauge;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor(access = PRIVATE)
-@Slf4j
 public class MqttMonitoring<MESSAGE> {
 
     @RequiredArgsConstructor
@@ -29,20 +25,20 @@ public class MqttMonitoring<MESSAGE> {
     public static class Factory {
 
         private final ObjectMapper mapper;
-        private final Mqtt5BlockingClient mqtt;
+        private final Mqtt mqtt;
         private final GaugeFactory gaugeFactory;
 
         public <MESSAGE> MqttMonitoring<MESSAGE> build(Class<MESSAGE> type, String topic,
-                Collection<MessageGauge<MESSAGE>> fieldPollers) {
+                Collection<MessageGauge<MESSAGE>> fieldPollers) throws IOException {
 
             return build(topic, (it) -> mapper.readValue(it, type), fieldPollers);
         }
 
-        public MqttMonitoring<JsonNode> build(String name, String topic, String... paths) {
+        public MqttMonitoring<JsonNode> build(String name, String topic, String... paths) throws IOException {
             return build(name, topic, asList(paths));
         }
 
-        public MqttMonitoring<JsonNode> build(String name, String topic, Collection<String> paths) {
+        public MqttMonitoring<JsonNode> build(String name, String topic, Collection<String> paths) throws IOException {
             var fieldPollers = paths.stream().map(path -> {
                 var gauge = gaugeFactory.build(gaugeName(name, path));
                 MessageGauge<JsonNode> messageGauge = new MessageGauge<>(gauge, it -> it.at(path).asDouble());
@@ -60,23 +56,12 @@ public class MqttMonitoring<MESSAGE> {
         }
 
         private <MESSAGE> MqttMonitoring<MESSAGE> build(String topic, MessageMapper<MESSAGE> messageMapper,
-                Collection<MessageGauge<MESSAGE>> fieldPollers) {
+                Collection<MessageGauge<MESSAGE>> fieldPollers) throws IOException {
             var poller = new MqttMonitoring<>(fieldPollers);
-            mqtt.subscribeWith().topicFilter(topic).send();
-
-            mqtt.toAsync().publishes(SUBSCRIBED, publish -> {
-                if (!publish.getTopic().filter().matches(MqttTopic.of(topic))) {
-                    return;
-                }
-                var rawMessage = UTF_8.decode(publish.getPayload().get()).toString();
-                try {
-                    var message = messageMapper.map(rawMessage);
-                    poller.update(message);
-                } catch (Exception e) {
-                    log.error("Updating MqttMonitoring failed for topic {} with message {}", topic, rawMessage, e);
-                }
+            mqtt.subscribe(topic, it -> {
+                var message = messageMapper.map(it);
+                poller.update(message);
             });
-
             return poller;
         }
     }
