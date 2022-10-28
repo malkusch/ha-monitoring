@@ -1,4 +1,8 @@
 logging.level.de.malkusch: DEBUG
+niu:
+   account: john@example.org
+   password: $ecret
+   countryCode: 49
 mqtt:
    host: example.org
    port: 8883

@@ -51,6 +51,12 @@
 			<artifactId>org.eclipse.paho.client.mqttv3</artifactId>
 			<version>1.2.5</version>
 		</dependency>
+
+		<dependency>
+			<groupId>com.github.malkusch</groupId>
+			<artifactId>java-niu</artifactId>
+			<version>0.2.0</version>
+		</dependency>
 	</dependencies>
 	<build>
 		<finalName>homeautomation-monitoring</finalName>
