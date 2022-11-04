@@ -43,6 +43,7 @@ public class NiuPoller implements AutoCloseable {
                                 simpleUpdate(BatteryInfo::temperature)),
                         new GaugeUpdate<>(gauge(vehicle, "battery_grade"), simpleUpdate(BatteryInfo::grade)),
                         new GaugeUpdate<>(gauge(vehicle, "battery_charge"), simpleUpdate(BatteryInfo::charge)),
+                        new GaugeUpdate<>(gauge(vehicle, "battery_isCharging"), simpleUpdate(it -> it.isCharging() ? 1 : 0)),
                         new GaugeUpdate<>(gauge(vehicle, "battery_status"), simpleUpdate(BatteryInfo::status)));
 
                 scheduleVehicleUpdates(vehicle.serialNumber(), updates);
