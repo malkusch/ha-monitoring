@@ -27,7 +27,7 @@ import de.malkusch.ha.monitoring.infrastructure.PrometheusProxyPoller.Mapping;
 import de.malkusch.ha.shared.infrastructure.http.HttpClient;
 import de.malkusch.ha.shared.infrastructure.http.JdkHttpClient;
 import de.malkusch.ha.shared.infrastructure.http.RetryingHttpClient;
-import io.prometheus.client.exporter.MetricsServlet;
+import io.prometheus.client.servlet.jakarta.exporter.MetricsServlet;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
