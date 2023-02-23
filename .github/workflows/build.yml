@@ -1,0 +1,15 @@
+name: Build
+on: [push]
+
+jobs:
+  build:
+    uses: malkusch/github/.github/workflows/maven-build.yml@master
+    with:
+      JDK_VERSION: 17
+
+  release:
+    if: github.ref == 'refs/heads/master'
+    needs: [build]
+    uses: malkusch/github/.github/workflows/github-release.yml@master
+    with:
+      FILE: ${{ needs.build.outputs.jar }}
