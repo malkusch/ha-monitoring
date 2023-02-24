@@ -4,8 +4,6 @@ on: [push]
 jobs:
   build:
     uses: malkusch/github/.github/workflows/maven-build.yml@master
-    with:
-      JDK_VERSION: 17
 
   release:
     if: github.ref == 'refs/heads/master'
