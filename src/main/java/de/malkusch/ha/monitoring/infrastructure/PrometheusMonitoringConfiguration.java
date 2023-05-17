@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.malkusch.ha.monitoring.infrastructure.PrometheusProxyPoller.Mapping;
+import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker;
 import de.malkusch.ha.shared.infrastructure.http.HttpClient;
 import de.malkusch.ha.shared.infrastructure.http.JdkHttpClient;
 import de.malkusch.ha.shared.infrastructure.http.RetryingHttpClient;
@@ -43,6 +44,7 @@ class PrometheusMonitoringConfiguration {
         private Duration timeout;
         private int retries;
         private String inverter;
+        private CircuitBreaker.Properties circuitBreaker;
         private List<Sensor> sensors;
         private List<MqttSensor> mqttSensors;
 
@@ -117,7 +119,9 @@ class PrometheusMonitoringConfiguration {
                 mapping("/Body/Data/Site/P_PV", "inverter_production") //
         );
         return new ScheduledPoller(
-                new OfflinePoller(new PrometheusProxyPoller(properties.inverter, offlineHttp(), mapper, mappings)));
+                new OfflinePoller(
+                        new PrometheusProxyPoller(properties.inverter, offlineHttp(), mapper, mappings), //
+                        properties.circuitBreaker));
     }
 
     @Bean

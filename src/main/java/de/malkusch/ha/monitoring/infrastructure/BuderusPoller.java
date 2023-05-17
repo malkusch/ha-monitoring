@@ -10,8 +10,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import de.malkusch.ha.shared.infrastructure.buderus.Heater;
+import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenException;
 import de.malkusch.ha.shared.infrastructure.scheduler.Schedulers;
-import de.malkusch.km200.KM200;
 import io.prometheus.client.Gauge;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,12 +20,12 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class BuderusPoller implements AutoCloseable {
 
-    private final KM200 km200;
+    private final Heater heater;
     private final ScheduledExecutorService scheduler = singleThreadScheduler("BuderusHeater");
 
-    BuderusPoller(KM200 km200, @Value("${buderus.queryRate}") Duration rate) throws Exception {
-        this.km200 = km200;
-        
+    BuderusPoller(Heater heater, @Value("${buderus.queryRate}") Duration rate) throws Exception {
+        this.heater = heater;
+
         log.info("Polling KM200 with rate {}", rate);
 
         scheduleUpdate("/dhwCircuits/dhw1/actualTemp", rate);
@@ -64,7 +65,7 @@ public class BuderusPoller implements AutoCloseable {
         var gauge = Gauge.build().name(name).help(help).create();
         gauge.register();
         Callable<Void> update = () -> {
-            var value = km200.queryDouble(path);
+            var value = heater.query(path);
             gauge.set(value);
             log.debug("Update {} = {}", path, value);
             return null;
@@ -73,6 +74,10 @@ public class BuderusPoller implements AutoCloseable {
         scheduler.scheduleAtFixedRate(() -> {
             try {
                 update.call();
+
+            } catch (CircuitBreakerOpenException e) {
+                log.warn("Skipping Heater's metric due to open circuit breaker");
+
             } catch (Exception e) {
                 log.error("Failed to update heater's metric {}", gauge, e);
             }

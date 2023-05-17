@@ -5,11 +5,19 @@ buderus:
    salt: 867845e97c4e29dce522b9a7d3a3e07b152bffadddbed7f5ffd842e9895ad1e4
    queryRate: PT1m
    timeout: PT10s
+   circuit-breaker:
+      failure-threshold: 5
+      success-threshold: 2
+      delay: PT5M
 monitoring:
    enabled: true
    updateRate: PT15s
    timeout: PT3S
    retries: 2
+   circuit-breaker:
+      failure-threshold: 5
+      success-threshold: 2
+      delay: PT10M
 mqtt:
    host: example.org
    port: 8883
