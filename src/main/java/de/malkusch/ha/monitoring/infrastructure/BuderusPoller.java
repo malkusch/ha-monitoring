@@ -24,6 +24,8 @@ public class BuderusPoller implements AutoCloseable {
 
     BuderusPoller(KM200 km200, @Value("${buderus.queryRate}") Duration rate) throws Exception {
         this.km200 = km200;
+        
+        log.info("Polling KM200 with rate {}", rate);
 
         scheduleUpdate("/dhwCircuits/dhw1/actualTemp", rate);
         scheduleUpdate("/dhwCircuits/dhw1/currentSetpoint", rate);

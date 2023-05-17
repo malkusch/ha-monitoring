@@ -11,8 +11,10 @@ import org.springframework.stereotype.Component;
 import de.malkusch.km200.KM200;
 import de.malkusch.km200.KM200Exception;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 @Configuration
+@Slf4j
 class BuderusConfiguration {
 
     @ConfigurationProperties("buderus")
@@ -28,7 +30,11 @@ class BuderusConfiguration {
 
     @Bean
     public KM200 km200(BuderusProperties properties) throws KM200Exception, IOException, InterruptedException {
-        return new KM200(properties.host, properties.timeout, properties.gatewayPassword,
+        var timeout = properties.timeout;
+        var host = properties.host;
+        log.info("Configured KM200(host={}, timeout={})", host, timeout);
+        
+        return new KM200(host, timeout, properties.gatewayPassword,
                 properties.privatePassword, properties.salt);
     }
 }
