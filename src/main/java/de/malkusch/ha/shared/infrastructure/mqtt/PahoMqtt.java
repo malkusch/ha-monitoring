@@ -76,16 +76,16 @@ final class PahoMqtt implements Mqtt {
 
     @Override
     public void close() throws MqttException {
-        try {
+        try (mqtt) {
+            if (!mqtt.isConnected()) {
+                return;
+            }
             log.info("Disconnecting MQTT");
             mqtt.disconnect(options.getConnectionTimeout() * 1000);
 
         } catch (Exception e) {
             log.warn("Disconnecting MQTT Failed", e);
             mqtt.disconnectForcibly(options.getConnectionTimeout() * 1000);
-
-        } finally {
-            mqtt.close();
         }
     }
 }

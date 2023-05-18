@@ -78,7 +78,8 @@ class ResilientMqtt implements Mqtt, AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        subscriptions.clear();
-        mqtt.close();
+        try (mqtt) {
+            subscriptions.clear();
+        }
     }
 }
