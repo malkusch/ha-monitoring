@@ -3,6 +3,7 @@ package de.malkusch.ha.shared.infrastructure.circuitbreaker;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import dev.failsafe.CircuitBreaker.State;
 import dev.failsafe.Failsafe;
 import dev.failsafe.FailsafeException;
 import dev.failsafe.FailsafeExecutor;
@@ -34,11 +35,8 @@ public final class CircuitBreaker<R> {
                 .withFailureThreshold(failureThreshold) //
                 .withDelay(delay) //
                 .withSuccessThreshold(successThreshold) //
-                .onClose(it -> {
-                    throwOpened.set(true);
-                    log.info("Closed circuit breaker {}", name);
-                }) //
-                .onOpen(it -> log.warn("Opened circuit breaker {}", name)) //
+                .onClose(it -> onClose()) //
+                .onOpen(it -> onOpen(it.getPreviousState())) //
                 .build());
     }
 
@@ -71,6 +69,17 @@ public final class CircuitBreaker<R> {
     }
 
     private final AtomicBoolean throwOpened = new AtomicBoolean(true);
+
+    private void onClose() {
+        throwOpened.set(true);
+        log.info("Closed circuit breaker {}", name);
+    }
+
+    private void onOpen(State previousState) {
+        if (previousState == State.CLOSED) {
+            log.warn("Opened circuit breaker {}", name);
+        }
+    }
 
     public <T extends R> T get(CheckedSupplier<T> supplier) throws CircuitBreakerOpenException {
         try {
