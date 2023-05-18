@@ -2,16 +2,13 @@ package de.malkusch.ha.shared.infrastructure.mqtt;
 
 import java.time.Duration;
 
-import org.eclipse.paho.client.mqttv3.IMqttClient;
-import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
+import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +32,7 @@ class MqttConfiguration {
         String password;
         Duration timeout;
         Duration keepAlive;
+        CircuitBreaker.Properties circuitBreaker;
     }
 
     @Bean
@@ -43,22 +41,8 @@ class MqttConfiguration {
             log.warn("MQTT is disabled");
             return new NullMqtt();
         }
-
-        var uri = String.format("ssl://%s:%s", properties.host, properties.port);
-        log.info("Connecting to MQTT {}", uri);
-
-        IMqttClient client = new MqttClient(uri, MqttClient.generateClientId(), new MemoryPersistence());
-
-        MqttConnectOptions options = new MqttConnectOptions();
-        options.setAutomaticReconnect(true);
-        options.setCleanSession(false);
-        options.setConnectionTimeout((int) properties.timeout.toSeconds());
-        options.setKeepAliveInterval((int) properties.keepAlive.toSeconds());
-        options.setPassword(properties.password.toCharArray());
-        options.setUserName(properties.user);
-
-        client.connect(options);
-
-        return new PahoMqtt(client);
+        var paho = new PahoMqtt(properties.host, properties.port, properties.user, properties.password,
+                properties.timeout, properties.keepAlive);
+        return new ResilientMqtt(paho, properties.circuitBreaker);
     }
 }

@@ -22,7 +22,7 @@ public class MqttMonitoring<MESSAGE> {
 
     @RequiredArgsConstructor
     @Component
-    public static class Factory {
+    public static class Factory implements AutoCloseable {
 
         private final ObjectMapper mapper;
         private final Mqtt mqtt;
@@ -63,6 +63,11 @@ public class MqttMonitoring<MESSAGE> {
                 poller.update(message);
             });
             return poller;
+        }
+
+        @Override
+        public void close() throws Exception {
+            mqtt.close();
         }
     }
 
