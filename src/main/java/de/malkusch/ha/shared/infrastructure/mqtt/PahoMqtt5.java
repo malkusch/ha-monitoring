@@ -127,7 +127,7 @@ final class PahoMqtt5 implements Mqtt {
 
         } catch (Exception e) {
             log.warn("Disconnecting MQTT Failed", e);
-            mqtt.disconnectForcibly(options.getConnectionTimeout() * 1000);
+            mqtt.disconnectForcibly(0, options.getConnectionTimeout() * 1000, true);
 
         } finally {
             mqtt.close(true);
