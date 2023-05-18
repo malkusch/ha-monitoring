@@ -81,19 +81,28 @@ public final class CircuitBreaker<R> {
         }
     }
 
-    public <T extends R> T get(CheckedSupplier<T> supplier) throws CircuitBreakerOpenException {
+    public <E1 extends Throwable, E2 extends Throwable, T extends R> T get(CheckedSupplier<T> supplier)
+            throws E1, E2, CircuitBreakerOpenException {
+
         try {
             return breaker.get(supplier);
 
-        } catch (FailsafeException e) {
+        } catch (dev.failsafe.CircuitBreakerOpenException e) {
             if (throwOpened.compareAndExchange(true, false)) {
                 throw new CircuitBreakerOpenedException(e.getCause());
             }
             throw new CircuitBreakerOpenException(e.getCause());
+
+        } catch (FailsafeException e) {
+            @SuppressWarnings("unchecked")
+            var cause = (E1) e.getCause();
+            throw cause;
         }
     }
 
-    public void run(CheckedRunnable operation) throws CircuitBreakerOpenException {
+    public <E1 extends Throwable, E2 extends Throwable> void run(CheckedRunnable operation)
+            throws E1, E2, CircuitBreakerOpenException {
+
         get(() -> {
             operation.run();
             return null;

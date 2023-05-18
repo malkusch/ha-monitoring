@@ -125,6 +125,29 @@ public class CircuitBreakerTest {
         }
     }
 
+    private static class AnyCheckedException extends Exception {
+    }
+
+    private static void anyMethod() throws AnyCheckedException {
+        throw new AnyCheckedException();
+    }
+
+    @Test
+    void shouldThrowCheckedUpstreamException() {
+        var breaker = new CircuitBreaker<>(ANY_NAME, 2, 2, ANY_DELAY, AnyCheckedException.class);
+
+        assertThrows(AnyCheckedException.class, () -> breaker.run(() -> anyMethod()));
+    }
+
+    @Test
+    void shouldOpenOnCheckedExceptions() {
+        var breaker = new CircuitBreaker<>(ANY_NAME, 2, 2, ANY_DELAY, AnyCheckedException.class);
+
+        assertThrows(AnyCheckedException.class, () -> breaker.run(() -> anyMethod()));
+        assertThrows(AnyCheckedException.class, () -> breaker.run(() -> anyMethod()));
+        assertThrows(CircuitBreakerOpenException.class, () -> breaker.run(() -> anyMethod()));
+    }
+
     public static TestScenario[] TEST_CASES_OPEN_AFTER_FAILURES() {
         return new TestScenario[] { //
                 new TestScenario(withFailureThreshold(1), FAIL), //

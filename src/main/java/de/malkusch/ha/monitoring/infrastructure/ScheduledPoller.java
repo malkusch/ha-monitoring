@@ -3,8 +3,6 @@ package de.malkusch.ha.monitoring.infrastructure;
 import java.io.IOException;
 import java.net.http.HttpTimeoutException;
 
-import javax.annotation.PostConstruct;
-
 import org.springframework.scheduling.annotation.Scheduled;
 
 import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenException;
@@ -23,7 +21,6 @@ final class ScheduledPoller implements Poller {
 
     @Override
     @Scheduled(fixedRateString = "${monitoring.updateRate}")
-    @PostConstruct
     public void update() throws IOException, InterruptedException {
         try {
             poller.update();
