@@ -14,9 +14,11 @@ import org.springframework.stereotype.Component;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Configuration
 @RequiredArgsConstructor
+@Slf4j
 class MqttConfiguration {
 
     private final Properties properties;
@@ -26,6 +28,7 @@ class MqttConfiguration {
     @Data
     public static class Properties {
 
+        boolean enabled;
         String host;
         int port;
         String user;
@@ -36,7 +39,14 @@ class MqttConfiguration {
 
     @Bean
     public Mqtt mqtt() throws MqttException {
+        if (!properties.enabled) {
+            log.warn("MQTT is disabled");
+            return new NullMqtt();
+        }
+
         var uri = String.format("ssl://%s:%s", properties.host, properties.port);
+        log.info("Connecting to MQTT {}", uri);
+
         IMqttClient client = new MqttClient(uri, MqttClient.generateClientId(), new MemoryPersistence());
 
         MqttConnectOptions options = new MqttConnectOptions();

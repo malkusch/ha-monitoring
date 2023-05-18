@@ -27,6 +27,7 @@ monitoring:
       success-threshold: 2
       delay: PT10M
 mqtt:
+   enabled: true
    host: example.org
    port: 8883
    user: user

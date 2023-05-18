@@ -30,7 +30,7 @@ public class NiuPoller implements AutoCloseable {
         this.rate = rate;
 
         for (var vehicle : niu.vehicles()) {
-            log.info("Scheduling NIU polling for vehicle {}", vehicle);
+            log.info("Polling NIU({}) with rate {}", vehicle, rate);
             {
                 var updates = new VehicleUpdates<>(niu::odometer,
                         new GaugeUpdate<>(gauge(vehicle, "odometer_days"), simpleUpdate(Odometer::days)),
