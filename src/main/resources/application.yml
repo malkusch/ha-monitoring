@@ -38,6 +38,7 @@ mqtt:
    user: user
    password: secret
    timeout: PT30S
+   session-expiry-interval: PT5M
    keep-alive: PT2M
 http:
    timeout: PT10S

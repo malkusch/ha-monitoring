@@ -16,13 +16,14 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-final class PahoMqtt implements Mqtt {
+@Deprecated
+final class PahoMqtt3 implements Mqtt {
 
     private final IMqttClient mqtt;
     private final String host;
     private final MqttConnectOptions options;
 
-    public PahoMqtt(String clientId, String host, int port, String user, String password, Duration timeout,
+    public PahoMqtt3(String clientId, String host, int port, String user, String password, Duration timeout,
             Duration keepAlive) throws MqttSecurityException, MqttException {
 
         this.host = host;
@@ -38,17 +39,6 @@ final class PahoMqtt implements Mqtt {
         options.setKeepAliveInterval((int) keepAlive.toSeconds());
         options.setPassword(password.toCharArray());
         options.setUserName(user);
-    }
-
-    public static class Properties {
-
-        boolean enabled;
-        String host;
-        int port;
-        String user;
-        String password;
-        Duration timeout;
-        Duration keepAlive;
     }
 
     private static final int QOS_LOWEST = 0;

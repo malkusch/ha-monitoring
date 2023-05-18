@@ -4,7 +4,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
 
-import org.eclipse.paho.client.mqttv3.MqttException;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,19 +33,24 @@ class MqttConfiguration {
         String password;
         Duration timeout;
         Duration keepAlive;
+        Duration sessionExpiryInterval;
         CircuitBreaker.Properties circuitBreaker;
     }
 
     @Bean
-    public Mqtt mqtt() throws MqttException, UnknownHostException {
+    public Mqtt mqtt() throws Exception {
         if (!properties.enabled) {
             log.warn("MQTT is disabled");
             return new NullMqtt();
         }
 
-        var paho = new PahoMqtt(clientId() ,properties.host, properties.port, properties.user, properties.password,
-                properties.timeout, properties.keepAlive);
-        return new ResilientMqtt(paho, properties.circuitBreaker);
+        // var paho3 = new PahoMqtt(clientId() ,properties.host,
+        // properties.port, properties.user, properties.password,
+        // properties.timeout, properties.keepAlive);
+
+        var paho5 = new PahoMqtt5(clientId(), properties.host, properties.port, properties.user, properties.password,
+                properties.timeout, properties.keepAlive, properties.sessionExpiryInterval);
+        return new ResilientMqtt(paho5, properties.circuitBreaker);
     }
 
     private String clientId() throws UnknownHostException {
