@@ -28,11 +28,11 @@ monitoring:
       delay: PT10M
 mqtt:
    enabled: true
-   resubscribe-rate: PT15m
+   resubscribe-rate: PT30m
    circuit-breaker:
       failure-threshold: 5
       success-threshold: 2
-      delay: PT30M
+      delay: PT3H
    host: example.org
    port: 8883
    user: user
