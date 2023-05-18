@@ -4,9 +4,12 @@ import java.io.IOException;
 import java.time.Duration;
 
 import org.eclipse.paho.client.mqttv3.IMqttClient;
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.MqttSecurityException;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
@@ -16,18 +19,21 @@ import lombok.extern.slf4j.Slf4j;
 final class PahoMqtt implements Mqtt {
 
     private final IMqttClient mqtt;
-    private final String uri;
+    private final String host;
     private final MqttConnectOptions options;
 
-    public PahoMqtt(String host, int port, String user, String password, Duration timeout, Duration keepAlive)
-            throws MqttSecurityException, MqttException {
+    public PahoMqtt(String clientId, String host, int port, String user, String password, Duration timeout,
+            Duration keepAlive) throws MqttSecurityException, MqttException {
 
-        uri = String.format("ssl://%s:%s", host, port);
-        mqtt = new MqttClient(uri, MqttClient.generateClientId(), new MemoryPersistence());
+        this.host = host;
+        var uri = String.format("ssl://%s:%s", host, port);
+        mqtt = new MqttClient(uri, clientId, new MemoryPersistence());
+        mqtt.setCallback(new MqttEventHandler());
 
         options = new MqttConnectOptions();
         options.setAutomaticReconnect(true);
-        options.setCleanSession(false);
+        // options.setCleanSession(false);
+        options.setCleanSession(true);
         options.setConnectionTimeout((int) timeout.toSeconds());
         options.setKeepAliveInterval((int) keepAlive.toSeconds());
         options.setPassword(password.toCharArray());
@@ -45,11 +51,13 @@ final class PahoMqtt implements Mqtt {
         Duration keepAlive;
     }
 
+    private static final int QOS_LOWEST = 0;
+
     @Override
     public synchronized void subscribe(String topic, Consumer consumer) throws IOException {
         try {
             checkConnection();
-            mqtt.subscribe(topic, (t, msg) -> consumer.consume(new String(msg.getPayload())));
+            mqtt.subscribe(topic, QOS_LOWEST, (t, msg) -> consumer.consume(new String(msg.getPayload())));
 
         } catch (MqttException e) {
             throw new IOException("Couldn't subscribe to " + topic, e);
@@ -62,16 +70,37 @@ final class PahoMqtt implements Mqtt {
                 return;
             }
             mqtt.connect(options);
-            log.info("Connected to MQTT {}", uri);
+            log.info("Connected {}", this);
 
         } catch (MqttException e) {
-            throw new IOException("Couldn't connect to MQTT", e);
+            throw new IOException("Couldn't connect to " + this, e);
+        }
+    }
+
+    private class MqttEventHandler implements MqttCallbackExtended {
+
+        @Override
+        public void connectionLost(Throwable cause) {
+            log.warn("Connection lost: {}", cause.getMessage());
+        }
+
+        @Override
+        public void messageArrived(String topic, MqttMessage message) throws Exception {
+        }
+
+        @Override
+        public void deliveryComplete(IMqttDeliveryToken token) {
+        }
+
+        @Override
+        public void connectComplete(boolean reconnect, String serverURI) {
+            log.info("Mqtt connected [reconnect={}, uri={}]", reconnect, serverURI);
         }
     }
 
     @Override
     public String toString() {
-        return uri;
+        return String.format("MQTT(%s, %s)", host, mqtt.getClientId());
     }
 
     @Override

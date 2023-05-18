@@ -1,5 +1,7 @@
 package de.malkusch.ha.shared.infrastructure.mqtt;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.Duration;
 
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -36,13 +38,19 @@ class MqttConfiguration {
     }
 
     @Bean
-    public Mqtt mqtt() throws MqttException {
+    public Mqtt mqtt() throws MqttException, UnknownHostException {
         if (!properties.enabled) {
             log.warn("MQTT is disabled");
             return new NullMqtt();
         }
-        var paho = new PahoMqtt(properties.host, properties.port, properties.user, properties.password,
+
+        var paho = new PahoMqtt(clientId() ,properties.host, properties.port, properties.user, properties.password,
                 properties.timeout, properties.keepAlive);
         return new ResilientMqtt(paho, properties.circuitBreaker);
+    }
+
+    private String clientId() throws UnknownHostException {
+        var hostname = InetAddress.getLocalHost().getHostName();
+        return String.format("ha-monitoring-%s", hostname);
     }
 }
