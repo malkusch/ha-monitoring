@@ -9,14 +9,17 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenException;
 import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenedException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@RequiredArgsConstructor
 @Slf4j
 final class ScheduledPoller implements Poller {
 
     private final Poller poller;
+
+    public ScheduledPoller(Poller poller) {
+        this.poller = poller;
+        log.info("Scheduling polling metric {}", poller);
+    }
 
     @Override
     @Scheduled(fixedRateString = "${monitoring.updateRate}")

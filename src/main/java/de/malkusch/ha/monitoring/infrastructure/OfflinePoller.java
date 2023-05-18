@@ -18,4 +18,9 @@ final class OfflinePoller implements Poller {
         } catch (IOException | CircuitBreakerOpenException e) {
         }
     }
+
+    @Override
+    public String toString() {
+        return poller.toString();
+    }
 }
