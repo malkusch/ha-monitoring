@@ -26,7 +26,7 @@ final class ScheduledPoller implements Poller {
             poller.update();
 
         } catch (CircuitBreakerOpenedException e) {
-            log.warn("Stop polling metric {} due to open circuit breaker", poller);
+            log.warn("Stop polling metric {}: Open circuit breaker", poller);
 
         } catch (CircuitBreakerOpenException e) {
 

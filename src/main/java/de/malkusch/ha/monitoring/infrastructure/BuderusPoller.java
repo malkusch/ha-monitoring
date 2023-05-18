@@ -77,7 +77,7 @@ public class BuderusPoller implements AutoCloseable {
                 update.call();
 
             } catch (CircuitBreakerOpenedException e) {
-                log.warn("Stop polling heater due to open circuit breaker");
+                log.warn("Stop polling heater: Open circuit breaker");
 
             } catch (CircuitBreakerOpenException e) {
 
