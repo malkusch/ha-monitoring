@@ -244,11 +244,13 @@ public class CircuitBreakerTest {
         return withFailureThreshold(failureThreshold, ANY_DELAY);
     }
 
+    private static final String ANY_NAME = "Any";
+
     private static CircuitBreaker<Integer> withFailureThreshold(int failureThreshold, Duration delay) {
-        return new CircuitBreaker<>(failureThreshold, 2, delay, TestException.class);
+        return new CircuitBreaker<>(ANY_NAME, failureThreshold, 2, delay, TestException.class);
     }
 
     private static CircuitBreaker<Integer> withThreshold(int failureThreshold, int successThreshold) {
-        return new CircuitBreaker<>(failureThreshold, 2, ANY_DELAY, TestException.class);
+        return new CircuitBreaker<>(ANY_NAME, failureThreshold, 2, ANY_DELAY, TestException.class);
     }
 }

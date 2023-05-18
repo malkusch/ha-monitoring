@@ -36,7 +36,7 @@ class BuderusConfiguration {
         var host = properties.host;
         var km200 = new KM200(host, timeout, properties.gatewayPassword, properties.privatePassword, properties.salt);
 
-        var circuitBreaker = new CircuitBreaker<Double>(properties.circuitBreaker, KM200Exception.class,
+        var circuitBreaker = new CircuitBreaker<Double>("KM200", properties.circuitBreaker, KM200Exception.class,
                 IOException.class);
 
         log.info("Configured KM200(host={}, timeout={}, circuit-breaker({}))", host, timeout, circuitBreaker);

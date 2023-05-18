@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import de.malkusch.ha.shared.infrastructure.buderus.Heater;
 import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenException;
+import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenedException;
 import de.malkusch.ha.shared.infrastructure.scheduler.Schedulers;
 import io.prometheus.client.Gauge;
 import lombok.extern.slf4j.Slf4j;
@@ -75,8 +76,10 @@ public class BuderusPoller implements AutoCloseable {
             try {
                 update.call();
 
+            } catch (CircuitBreakerOpenedException e) {
+                log.warn("Stop polling heater due to open circuit breaker");
+
             } catch (CircuitBreakerOpenException e) {
-                log.warn("Skipping Heater's metric due to open circuit breaker");
 
             } catch (Exception e) {
                 log.error("Failed to update heater's metric {}", gauge, e);

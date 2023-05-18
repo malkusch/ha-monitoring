@@ -57,7 +57,6 @@ class PrometheusMonitoringConfiguration {
             public String topic() {
                 return topic == null ? name : topic;
             }
-
         }
 
         @Data
@@ -91,8 +90,7 @@ class PrometheusMonitoringConfiguration {
                 mapping("/Sac2", "batterie_Sac2"), //
                 mapping("/Sac3", "batterie_Sac3") //
         );
-        return new ScheduledPoller(new CircuitBreakerPoller(properties.circuitBreaker,
-                new PrometheusProxyPoller(url, monitoringHttp(), mapper, mappings)));
+        return new ScheduledPoller(proxyPoller(url, monitoringHttp(), mappings));
     }
 
     @Bean
@@ -111,8 +109,7 @@ class PrometheusMonitoringConfiguration {
     @Bean
     @Scope(value = SCOPE_PROTOTYPE)
     ScheduledPoller proxy(String url, Collection<Mapping> mappings) {
-        return new ScheduledPoller(new CircuitBreakerPoller(properties.circuitBreaker,
-                new PrometheusProxyPoller(url, monitoringHttp(), mapper, mappings)));
+        return new ScheduledPoller(proxyPoller(url, monitoringHttp(), mappings));
     }
 
     @Bean
@@ -120,8 +117,13 @@ class PrometheusMonitoringConfiguration {
         var mappings = asList( //
                 mapping("/Body/Data/Site/P_PV", "inverter_production") //
         );
-        return new ScheduledPoller(
-                new OfflinePoller(new PrometheusProxyPoller(properties.inverter, offlineHttp(), mapper, mappings)));
+        return new ScheduledPoller(new OfflinePoller(proxyPoller(properties.inverter, offlineHttp(), mappings)));
+    }
+
+    private Poller proxyPoller(String url, HttpClient http, Collection<Mapping> mappings) {
+        Poller poller = new PrometheusProxyPoller(url, http, mapper, mappings);
+        poller = new CircuitBreakerPoller(properties.circuitBreaker, poller);
+        return poller;
     }
 
     @Bean

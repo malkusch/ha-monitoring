@@ -26,7 +26,7 @@ public final class RetryingHttpClient extends HttpClientProxy {
             policy.withDelay(delay);
         }
         policy.withMaxRetries(retries);
-        policy.onRetry(it -> LOGGER.warn("Retrying"));
+        policy.onRetry(it -> LOGGER.debug("Retrying"));
         retry = Failsafe.with(policy.build());
     }
 

@@ -1,6 +1,7 @@
 package de.malkusch.ha.shared.infrastructure.circuitbreaker;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import dev.failsafe.Failsafe;
 import dev.failsafe.FailsafeException;
@@ -17,11 +18,13 @@ public final class CircuitBreaker<R> {
     private final int failureThreshold;
     private final int successThreshold;
     private final Duration delay;
+    private final String name;
 
     @SafeVarargs
-    public CircuitBreaker(int failureThreshold, int successThreshold, Duration delay,
+    public CircuitBreaker(String name, int failureThreshold, int successThreshold, Duration delay,
             Class<? extends Throwable>... exceptions) {
 
+        this.name = name;
         this.failureThreshold = failureThreshold;
         this.successThreshold = successThreshold;
         this.delay = delay;
@@ -31,8 +34,11 @@ public final class CircuitBreaker<R> {
                 .withFailureThreshold(failureThreshold) //
                 .withDelay(delay) //
                 .withSuccessThreshold(successThreshold) //
-                .onOpen(it -> log.warn("Circuit breaker opened")) //
-                .onClose(it -> log.info("Circuit breaker closed")) //
+                .onClose(it -> {
+                    throwOpened.set(true);
+                    log.info("Closed circuit breaker {}", name);
+                }) //
+                .onOpen(it -> log.warn("Opened circuit breaker {}", name)) //
                 .build());
     }
 
@@ -44,8 +50,8 @@ public final class CircuitBreaker<R> {
     }
 
     @SafeVarargs
-    public CircuitBreaker(Properties properties, Class<? extends Throwable>... exceptions) {
-        this(properties.failureThreshold, properties.successThreshold, properties.delay, exceptions);
+    public CircuitBreaker(String name, Properties properties, Class<? extends Throwable>... exceptions) {
+        this(name, properties.failureThreshold, properties.successThreshold, properties.delay, exceptions);
     }
 
     public static class CircuitBreakerOpenException extends RuntimeException {
@@ -56,10 +62,24 @@ public final class CircuitBreaker<R> {
         }
     }
 
+    public static class CircuitBreakerOpenedException extends CircuitBreakerOpenException {
+        private static final long serialVersionUID = -6011504260051976020L;
+
+        CircuitBreakerOpenedException(Throwable cause) {
+            super(cause);
+        }
+    }
+
+    private final AtomicBoolean throwOpened = new AtomicBoolean(true);
+
     public <T extends R> T get(CheckedSupplier<T> supplier) throws CircuitBreakerOpenException {
         try {
             return breaker.get(supplier);
+
         } catch (FailsafeException e) {
+            if (throwOpened.compareAndExchange(true, false)) {
+                throw new CircuitBreakerOpenedException(e.getCause());
+            }
             throw new CircuitBreakerOpenException(e.getCause());
         }
     }
@@ -73,7 +93,7 @@ public final class CircuitBreaker<R> {
 
     @Override
     public String toString() {
-        return String.format("failureThreshold=%d, successThreshold=%d, delay=%s", failureThreshold, successThreshold,
-                delay);
+        return String.format("%s(failureThreshold=%d, successThreshold=%d, delay=%s)", name, failureThreshold,
+                successThreshold, delay);
     }
 }

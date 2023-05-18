@@ -2,6 +2,7 @@ package de.malkusch.ha.monitoring.infrastructure;
 
 import java.io.IOException;
 
+import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenException;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -14,7 +15,7 @@ final class OfflinePoller implements Poller {
         try {
             poller.update();
 
-        } catch (IOException e) {
+        } catch (IOException | CircuitBreakerOpenException e) {
         }
     }
 }
