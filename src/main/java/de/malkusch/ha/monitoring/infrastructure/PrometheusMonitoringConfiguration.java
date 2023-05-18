@@ -7,11 +7,11 @@ import static org.springframework.beans.factory.config.ConfigurableBeanFactory.S
 
 import java.io.IOException;
 import java.time.Duration;
+import java.time.LocalTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.malkusch.ha.monitoring.infrastructure.PrometheusProxyPoller.Mapping;
+import de.malkusch.ha.monitoring.infrastructure.SonnenPoller.DownTime;
 import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker;
 import de.malkusch.ha.shared.infrastructure.http.HttpClient;
 import de.malkusch.ha.shared.infrastructure.http.JdkHttpClient;
@@ -74,8 +75,27 @@ class PrometheusMonitoringConfiguration {
         return new ServletRegistrationBean<>(new MetricsServlet(), "/prometheus/*");
     }
 
+    @Component
+    @ConfigurationProperties("sonnen")
+    @Data
+    static class SonnenProperties {
+        private String url;
+        private DownTime downTime;
+
+        @Data
+        static class DownTime {
+            private LocalTime start;
+            private LocalTime end;
+        }
+    }
+
+    private final SonnenProperties sonnenProperties;
+
     @Bean
-    public ScheduledPoller sonnenPrometheusProxy(@Value("${sonnen.url}") String url) {
+    public ScheduledPoller sonnenPrometheusProxy() {
+        var url = sonnenProperties.url;
+        var downTime = new DownTime(sonnenProperties.downTime.start, sonnenProperties.downTime.end);
+
         var mappings = asList( //
                 mapping("/Consumption_W", "batterie_consumption"), //
                 mapping("/Production_W", "batterie_production"), //
@@ -90,7 +110,9 @@ class PrometheusMonitoringConfiguration {
                 mapping("/Sac2", "batterie_Sac2"), //
                 mapping("/Sac3", "batterie_Sac3") //
         );
-        return new ScheduledPoller(proxyPoller(url, monitoringHttp(), mappings));
+        var poller = proxyPoller(url, monitoringHttp(), mappings);
+        poller = new SonnenPoller(poller, downTime);
+        return new ScheduledPoller(poller);
     }
 
     @Bean

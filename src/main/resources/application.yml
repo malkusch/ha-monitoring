@@ -9,6 +9,10 @@ buderus:
       failure-threshold: 5
       success-threshold: 2
       delay: PT5M
+sonnen:
+   down-time:
+      start: 00:45:00
+      end: 01:10:00 
 monitoring:
    enabled: true
    updateRate: PT15s
