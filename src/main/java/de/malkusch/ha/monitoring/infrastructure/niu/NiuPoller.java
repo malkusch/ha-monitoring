@@ -10,8 +10,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenException;
+import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenedException;
 import de.malkusch.ha.shared.infrastructure.scheduler.Schedulers;
-import de.malkusch.niu.Niu;
 import de.malkusch.niu.Niu.BatteryInfo;
 import de.malkusch.niu.Niu.Odometer;
 import de.malkusch.niu.Niu.Vehicle;
@@ -29,6 +30,7 @@ public class NiuPoller implements AutoCloseable {
         this.rate = rate;
 
         for (var vehicle : niu.vehicles()) {
+            log.info("Scheduling NIU polling for vehicle {}", vehicle);
             {
                 var updates = new VehicleUpdates<>(niu::odometer,
                         new GaugeUpdate<>(gauge(vehicle, "odometer_days"), simpleUpdate(Odometer::days)),
@@ -43,7 +45,8 @@ public class NiuPoller implements AutoCloseable {
                                 simpleUpdate(BatteryInfo::temperature)),
                         new GaugeUpdate<>(gauge(vehicle, "battery_grade"), simpleUpdate(BatteryInfo::grade)),
                         new GaugeUpdate<>(gauge(vehicle, "battery_charge"), simpleUpdate(BatteryInfo::charge)),
-                        new GaugeUpdate<>(gauge(vehicle, "battery_isCharging"), simpleUpdate(it -> it.isCharging() ? 1 : 0)),
+                        new GaugeUpdate<>(gauge(vehicle, "battery_isCharging"),
+                                simpleUpdate(it -> it.isCharging() ? 1 : 0)),
                         new GaugeUpdate<>(gauge(vehicle, "battery_status"), simpleUpdate(BatteryInfo::status)));
 
                 scheduleVehicleUpdates(vehicle.serialNumber(), updates);
@@ -78,10 +81,10 @@ public class NiuPoller implements AutoCloseable {
         }
     }
 
-    private record VehicleUpdates<T> (VehicleQuery<T> query, GaugeUpdate<T>... updates) {
+    private record VehicleUpdates<T>(VehicleQuery<T> query, GaugeUpdate<T>... updates) {
     }
 
-    private record GaugeUpdate<T> (Gauge gauge, BiConsumer<T, Gauge> update) {
+    private record GaugeUpdate<T>(Gauge gauge, BiConsumer<T, Gauge> update) {
     }
 
     private static <T> BiConsumer<T, Gauge> simpleUpdate(Function<T, Number> update) {
@@ -104,6 +107,11 @@ public class NiuPoller implements AutoCloseable {
                 for (var update : updates.updates) {
                     update.update.accept(result, update.gauge);
                 }
+            } catch (CircuitBreakerOpenedException e) {
+                log.warn("Stop polling niu: Open circuit breaker");
+
+            } catch (CircuitBreakerOpenException e) {
+
             } catch (Exception e) {
                 log.error("Failed to update niu's metric", e);
             }
