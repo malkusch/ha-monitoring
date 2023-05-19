@@ -40,7 +40,7 @@ final class SonnenPoller implements Poller {
 
         } catch (Exception e) {
             if (isWithinDownTime()) {
-                log.info("{} is not available within daily down time {}", poller, downTime);
+                log.debug("{} is not available within daily down time {}", poller, downTime);
 
             } else {
                 throw e;
