@@ -4,6 +4,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.paho.mqttv5.client.IMqttMessageListener;
 import org.eclipse.paho.mqttv5.client.IMqttToken;
@@ -18,11 +19,11 @@ import org.eclipse.paho.mqttv5.common.MqttMessage;
 import org.eclipse.paho.mqttv5.common.MqttSubscription;
 import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
 
-import de.malkusch.ha.shared.infrastructure.mqtt.ResilientMqtt.ReonnectableMqtt;
+import de.malkusch.ha.shared.infrastructure.mqtt.ResilientMqtt.ReconnectableMqtt;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-final class PahoMqtt5 implements ReonnectableMqtt {
+final class PahoMqtt5 implements ReconnectableMqtt {
 
     private final MqttClient mqtt;
     private final String host;
@@ -81,21 +82,45 @@ final class PahoMqtt5 implements ReonnectableMqtt {
         }
     }
 
-    private volatile Runnable onReconnect = () -> {
+    @Override
+    public void reconnect() throws IOException {
+        try {
+            disconnect();
+            nextReconnect.set(true);
+            mqtt.reconnect();
+            log.info("Reconnected {}", this);
+
+        } catch (MqttException e) {
+            throw new IOException("Couldn't reconnect to " + this, e);
+        }
+    }
+
+    private static final Runnable NOTHING = () -> {
     };
+
+    private volatile Runnable onReconnect = NOTHING;
 
     @Override
     public void onReconnect(Runnable onReconnect) {
         this.onReconnect = onReconnect;
     }
 
+    private void callOnRedirect() {
+        onReconnect.run();
+    }
+
+    private AtomicBoolean nextReconnect = new AtomicBoolean(false);
+
     private class MqttEventHandler implements MqttCallback {
 
         @Override
         public void connectComplete(boolean reconnect, String serverURI) {
+            if (nextReconnect.compareAndSet(true, false)) {
+                reconnect = true;
+            }
             log.info("Connected [reconnect={}, uri={}]", reconnect, serverURI);
             if (reconnect) {
-                onReconnect.run();
+                callOnRedirect();
             }
         }
 
@@ -131,6 +156,15 @@ final class PahoMqtt5 implements ReonnectableMqtt {
     @Override
     public void close() throws MqttException {
         try {
+            disconnect();
+
+        } finally {
+            mqtt.close(true);
+        }
+    }
+
+    private void disconnect() throws MqttException {
+        try {
             if (!mqtt.isConnected()) {
                 return;
             }
@@ -140,9 +174,6 @@ final class PahoMqtt5 implements ReonnectableMqtt {
         } catch (Exception e) {
             log.warn("Disconnecting MQTT Failed", e);
             mqtt.disconnectForcibly(0, options.getConnectionTimeout() * 1000, true);
-
-        } finally {
-            mqtt.close(true);
         }
     }
 }

@@ -67,6 +67,12 @@
 			<artifactId>niu-api</artifactId>
 			<version>0.3.4</version>
 		</dependency>
+		
+		<dependency>
+			<groupId>net.time4j</groupId>
+			<artifactId>time4j-base</artifactId>
+			<version>5.9.3</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>

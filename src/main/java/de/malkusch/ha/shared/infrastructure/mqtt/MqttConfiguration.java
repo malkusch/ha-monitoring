@@ -50,7 +50,7 @@ public class MqttConfiguration {
 
         var paho5 = new PahoMqtt5(clientId(), properties.host, properties.port, properties.user, properties.password,
                 properties.timeout, properties.keepAlive, properties.sessionExpiryInterval);
-        return new ResilientMqtt(paho5, properties.circuitBreaker);
+        return new ResilientMqtt(paho5, properties.circuitBreaker, properties.keepAlive);
     }
 
     private String clientId() throws UnknownHostException {

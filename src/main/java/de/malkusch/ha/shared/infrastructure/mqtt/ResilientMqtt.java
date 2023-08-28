@@ -1,6 +1,10 @@
 package de.malkusch.ha.shared.infrastructure.mqtt;
 
+import static de.malkusch.ha.shared.infrastructure.DateUtil.formatTime;
+
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -14,7 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 class ResilientMqtt implements Mqtt, AutoCloseable {
 
-    private final Mqtt mqtt;
+    private final ReconnectableMqtt mqtt;
+    private volatile Instant lastMessage = Instant.now();
 
     private class ResilientConsumer implements Consumer {
 
@@ -30,6 +35,8 @@ class ResilientMqtt implements Mqtt, AutoCloseable {
 
         @Override
         public void consume(String message) throws Exception {
+            lastMessage = Instant.now();
+            log.debug("Received message for {}", topic);
             try {
                 circuitBreaker.run(() -> consumer.consume(message));
 
@@ -50,18 +57,21 @@ class ResilientMqtt implements Mqtt, AutoCloseable {
         }
     }
 
-    public ResilientMqtt(ReonnectableMqtt mqtt, CircuitBreaker.Properties properties) {
+    public ResilientMqtt(ReconnectableMqtt mqtt, CircuitBreaker.Properties properties, Duration keepAlive) {
         this.mqtt = mqtt;
         this.subscribeCircuitBreaker = new CircuitBreaker<>(mqtt.toString(), properties, IOException.class);
+        this.keepAlive = keepAlive;
 
         log.info("Configured MQTT with {}", subscribeCircuitBreaker);
 
         mqtt.onReconnect(this::resubscribeAll);
     }
 
-    public static interface ReonnectableMqtt extends Mqtt {
+    public static interface ReconnectableMqtt extends Mqtt {
 
         public void onReconnect(Runnable onReconnect);
+
+        public void reconnect() throws IOException;
 
     }
 
@@ -90,7 +100,7 @@ class ResilientMqtt implements Mqtt, AutoCloseable {
     private boolean subscribe(ResilientConsumer consumer) {
         try {
             subscribeCircuitBreaker.run(() -> mqtt.subscribe(consumer.topic, consumer));
-            log.info("Subscribed {} sucessfully", consumer);
+            log.info("Subscribed {} successfully", consumer);
             return true;
 
         } catch (CircuitBreakerOpenedException e) {
@@ -119,6 +129,19 @@ class ResilientMqtt implements Mqtt, AutoCloseable {
                 return;
             }
         }
+    }
+
+    private final Duration keepAlive;
+
+    @Scheduled(fixedRateString = "${mqtt.keep-alive}")
+    void keepAlive() throws IOException {
+        Instant threshold = lastMessage.plus(keepAlive);
+        if (Instant.now().isBefore(threshold)) {
+            return;
+        }
+        log.warn("MQTT seems inactive. Last message was at {}.", formatTime(lastMessage));
+        log.info("Reconnecting {}", mqtt);
+        mqtt.reconnect();
     }
 
     @Override
