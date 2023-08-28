@@ -50,22 +50,41 @@ class ResilientMqtt implements Mqtt, AutoCloseable {
         }
     }
 
-    public ResilientMqtt(Mqtt mqtt, CircuitBreaker.Properties properties) {
+    public ResilientMqtt(ReonnectableMqtt mqtt, CircuitBreaker.Properties properties) {
         this.mqtt = mqtt;
         this.subscribeCircuitBreaker = new CircuitBreaker<>(mqtt.toString(), properties, IOException.class);
 
         log.info("Configured MQTT with {}", subscribeCircuitBreaker);
+
+        mqtt.onReconnect(this::resubscribeAll);
+    }
+
+    public static interface ReonnectableMqtt extends Mqtt {
+
+        public void onReconnect(Runnable onReconnect);
+
+    }
+
+    private final Queue<ResilientConsumer> subscriptions = new ConcurrentLinkedQueue<>();
+
+    void resubscribeAll() {
+        log.info("Resubscribe all");
+        pendingSubscriptions.clear();
+        pendingSubscriptions.addAll(subscriptions);
+        subscribePendingSubscriptions();
     }
 
     @Override
     public void subscribe(String topic, Consumer consumer) {
         var resilientConsumer = new ResilientConsumer(topic, consumer);
+        subscriptions.add(resilientConsumer);
+
         if (!subscribe(resilientConsumer)) {
-            subscriptions.add(resilientConsumer);
+            pendingSubscriptions.add(resilientConsumer);
         }
     }
 
-    private final Queue<ResilientConsumer> subscriptions = new ConcurrentLinkedQueue<>();
+    private final Queue<ResilientConsumer> pendingSubscriptions = new ConcurrentLinkedQueue<>();
     private final CircuitBreaker<Void> subscribeCircuitBreaker;
 
     private boolean subscribe(ResilientConsumer consumer) {
@@ -87,16 +106,16 @@ class ResilientMqtt implements Mqtt, AutoCloseable {
     }
 
     @Scheduled(fixedRateString = "${mqtt.resubscribe-rate}")
-    void subscribeQueue() {
-        if (subscriptions.isEmpty()) {
+    void subscribePendingSubscriptions() {
+        if (pendingSubscriptions.isEmpty()) {
             return;
         }
-        log.info("Resubscribing {} subscriptions", subscriptions.size());
+        log.info("Resubscribing {} subscriptions", pendingSubscriptions.size());
 
         ResilientConsumer consumer;
-        while ((consumer = subscriptions.poll()) != null) {
+        while ((consumer = pendingSubscriptions.poll()) != null) {
             if (!subscribe(consumer)) {
-                subscriptions.add(consumer);
+                pendingSubscriptions.add(consumer);
                 return;
             }
         }
@@ -105,7 +124,7 @@ class ResilientMqtt implements Mqtt, AutoCloseable {
     @Override
     public void close() throws Exception {
         try (mqtt) {
-            subscriptions.clear();
+            pendingSubscriptions.clear();
         }
     }
 }

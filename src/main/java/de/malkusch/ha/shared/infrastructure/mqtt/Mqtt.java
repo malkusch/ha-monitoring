@@ -10,5 +10,4 @@ public interface Mqtt extends AutoCloseable {
     }
 
     void subscribe(String topic, Consumer consumer) throws IOException;
-
 }

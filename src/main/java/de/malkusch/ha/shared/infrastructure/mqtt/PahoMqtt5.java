@@ -18,10 +18,11 @@ import org.eclipse.paho.mqttv5.common.MqttMessage;
 import org.eclipse.paho.mqttv5.common.MqttSubscription;
 import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
 
+import de.malkusch.ha.shared.infrastructure.mqtt.ResilientMqtt.ReonnectableMqtt;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-final class PahoMqtt5 implements Mqtt {
+final class PahoMqtt5 implements ReonnectableMqtt {
 
     private final MqttClient mqtt;
     private final String host;
@@ -80,11 +81,22 @@ final class PahoMqtt5 implements Mqtt {
         }
     }
 
+    private volatile Runnable onReconnect = () -> {
+    };
+
+    @Override
+    public void onReconnect(Runnable onReconnect) {
+        this.onReconnect = onReconnect;
+    }
+
     private class MqttEventHandler implements MqttCallback {
 
         @Override
         public void connectComplete(boolean reconnect, String serverURI) {
             log.info("Connected [reconnect={}, uri={}]", reconnect, serverURI);
+            if (reconnect) {
+                onReconnect.run();
+            }
         }
 
         @Override
