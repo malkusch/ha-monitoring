@@ -52,6 +52,11 @@ public final class CircuitBreaker<R> {
         this(name, properties.failureThreshold, properties.successThreshold, properties.delay, exceptions);
     }
 
+    @SafeVarargs
+    public CircuitBreaker(String name, CircuitBreaker<?> prototype, Class<? extends Throwable>... exceptions) {
+        this(name, prototype.failureThreshold, prototype.successThreshold, prototype.delay, exceptions);
+    }
+
     public static class CircuitBreakerOpenException extends RuntimeException {
         private static final long serialVersionUID = -6011504260051976020L;
 

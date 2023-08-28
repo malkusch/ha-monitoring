@@ -15,16 +15,34 @@ import lombok.extern.slf4j.Slf4j;
 class ResilientMqtt implements Mqtt, AutoCloseable {
 
     private final Mqtt mqtt;
-    private final CircuitBreaker<Void> circuitBreaker;
 
-    public ResilientMqtt(Mqtt mqtt, CircuitBreaker.Properties properties) {
-        this.mqtt = mqtt;
-        this.circuitBreaker = new CircuitBreaker<>(mqtt.toString(), properties, IOException.class);
+    private class ResilientConsumer implements Consumer {
 
-        log.info("Configured MQTT with {}", circuitBreaker);
-    }
+        private final CircuitBreaker<Void> circuitBreaker;
+        private final Consumer consumer;
+        private final String topic;
 
-    private static record Subscription(String topic, Consumer consumer) {
+        public ResilientConsumer(String topic, Consumer consumer) {
+            circuitBreaker = new CircuitBreaker<Void>(topic, subscribeCircuitBreaker, Throwable.class);
+            this.consumer = consumer;
+            this.topic = topic;
+        }
+
+        @Override
+        public void consume(String message) throws Exception {
+            try {
+                circuitBreaker.run(() -> consumer.consume(message));
+
+            } catch (CircuitBreakerOpenedException e) {
+                log.warn("Failed consuming message from {}: Circuit breaker opened", topic, e.getCause());
+
+            } catch (CircuitBreakerOpenException e) {
+                log.info("Failed consuming message from {}: Circuit breaker open", topic);
+
+            } catch (Throwable e) {
+                log.warn("Failed consuming message from {}: {}", topic, message, e);
+            }
+        }
 
         @Override
         public String toString() {
@@ -32,30 +50,38 @@ class ResilientMqtt implements Mqtt, AutoCloseable {
         }
     }
 
+    public ResilientMqtt(Mqtt mqtt, CircuitBreaker.Properties properties) {
+        this.mqtt = mqtt;
+        this.subscribeCircuitBreaker = new CircuitBreaker<>(mqtt.toString(), properties, IOException.class);
+
+        log.info("Configured MQTT with {}", subscribeCircuitBreaker);
+    }
+
     @Override
     public void subscribe(String topic, Consumer consumer) {
-        var subscription = new Subscription(topic, consumer);
-        if (!subscribe(subscription)) {
-            subscriptions.add(subscription);
+        var resilientConsumer = new ResilientConsumer(topic, consumer);
+        if (!subscribe(resilientConsumer)) {
+            subscriptions.add(resilientConsumer);
         }
     }
 
-    private final Queue<Subscription> subscriptions = new ConcurrentLinkedQueue<>();
+    private final Queue<ResilientConsumer> subscriptions = new ConcurrentLinkedQueue<>();
+    private final CircuitBreaker<Void> subscribeCircuitBreaker;
 
-    private boolean subscribe(Subscription subscription) {
+    private boolean subscribe(ResilientConsumer consumer) {
         try {
-            circuitBreaker.run(() -> mqtt.subscribe(subscription.topic, subscription.consumer));
-            log.info("Subscribed {} sucessfully", subscription);
+            subscribeCircuitBreaker.run(() -> mqtt.subscribe(consumer.topic, consumer));
+            log.info("Subscribed {} sucessfully", consumer);
             return true;
 
         } catch (CircuitBreakerOpenedException e) {
-            log.warn("Subscribing {} failed: Circuit breaker opened", subscription, e.getCause());
+            log.warn("Subscribing {} failed: Circuit breaker opened", consumer, e.getCause());
 
         } catch (CircuitBreakerOpenException e) {
-            log.info("Subscribing {} failed: Circuit breaker open", subscription);
+            log.info("Subscribing {} failed: Circuit breaker open", consumer);
 
-        } catch (Exception e) {
-            log.warn("Subscribing {} failed", subscription, e);
+        } catch (Throwable e) {
+            log.warn("Subscribing {} failed", consumer, e);
         }
         return false;
     }
@@ -67,10 +93,10 @@ class ResilientMqtt implements Mqtt, AutoCloseable {
         }
         log.info("Resubscribing {} subscriptions", subscriptions.size());
 
-        Subscription subscription;
-        while ((subscription = subscriptions.poll()) != null) {
-            if (!subscribe(subscription)) {
-                subscriptions.add(subscription);
+        ResilientConsumer consumer;
+        while ((consumer = subscriptions.poll()) != null) {
+            if (!subscribe(consumer)) {
+                subscriptions.add(consumer);
                 return;
             }
         }
