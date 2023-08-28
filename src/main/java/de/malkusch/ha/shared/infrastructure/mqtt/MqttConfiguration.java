@@ -17,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 @Configuration
 @RequiredArgsConstructor
 @Slf4j
-class MqttConfiguration {
+public class MqttConfiguration {
 
     private final Properties properties;
 

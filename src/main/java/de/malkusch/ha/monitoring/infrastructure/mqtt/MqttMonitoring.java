@@ -1,4 +1,4 @@
-package de.malkusch.ha.monitoring.infrastructure;
+package de.malkusch.ha.monitoring.infrastructure.mqtt;
 
 import static java.util.Arrays.asList;
 import static lombok.AccessLevel.PRIVATE;
@@ -10,30 +10,27 @@ import java.util.function.Function;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.malkusch.ha.monitoring.infrastructure.persistence.GaugeFactory;
 import de.malkusch.ha.shared.infrastructure.mqtt.Mqtt;
 import io.prometheus.client.Gauge;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor(access = PRIVATE)
 public class MqttMonitoring<MESSAGE> {
 
     @RequiredArgsConstructor
     @Component
-    @Slf4j
     public static class Factory implements AutoCloseable {
 
-        private final ObjectMapper mapper;
         private final Mqtt mqtt;
         private final GaugeFactory gaugeFactory;
+        private final MessageMapper.Factory messageMapperFactory;
 
         public <MESSAGE> MqttMonitoring<MESSAGE> build(Class<MESSAGE> type, String topic,
                 Collection<MessageGauge<MESSAGE>> fieldPollers) throws IOException {
 
-            return build(topic, safeJson((it) -> mapper.readValue(it, type)), fieldPollers);
+            return build(topic, messageMapperFactory.jsonObject(type), fieldPollers);
         }
 
         public MqttMonitoring<JsonNode> build(String name, String topic, String... paths) throws IOException {
@@ -46,31 +43,11 @@ public class MqttMonitoring<MESSAGE> {
                 MessageGauge<JsonNode> messageGauge = new MessageGauge<>(gauge, it -> it.at(path).asDouble());
                 return messageGauge;
             }).toList();
-            return build(topic, safeJson((it) -> mapper.readTree(it)), fieldPollers);
+            return build(topic, messageMapperFactory.jsonTree(), fieldPollers);
         }
 
         private static String gaugeName(String topic, String path) {
             return topic + "_" + path.substring(1).replace(".", "");
-        }
-
-        private static final Function<String, String> FILTER_NAN = it -> it.replaceAll(": nan", ": null");
-
-        <MESSAGE> MessageMapper<MESSAGE> safeJson(MessageMapper<MESSAGE> mapper) {
-            return message -> {
-                try {
-                    return mapper.map(message);
-
-                } catch (Exception e) {
-                    var fixed = FILTER_NAN.apply(message);
-                    var mapped = mapper.map(fixed);
-                    log.warn("Message {} was repaired to {}: {}", message, fixed, e.getMessage());
-                    return mapped;
-                }
-            };
-        }
-
-        private static interface MessageMapper<MESSAGE> {
-            MESSAGE map(String message) throws Exception;
         }
 
         private <MESSAGE> MqttMonitoring<MESSAGE> build(String topic, MessageMapper<MESSAGE> messageMapper,

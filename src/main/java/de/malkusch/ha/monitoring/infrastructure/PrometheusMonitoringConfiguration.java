@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.malkusch.ha.monitoring.infrastructure.PrometheusProxyPoller.Mapping;
 import de.malkusch.ha.monitoring.infrastructure.SonnenPoller.DownTime;
+import de.malkusch.ha.monitoring.infrastructure.mqtt.MqttMonitoring;
 import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker;
 import de.malkusch.ha.shared.infrastructure.http.HttpClient;
 import de.malkusch.ha.shared.infrastructure.http.JdkHttpClient;
