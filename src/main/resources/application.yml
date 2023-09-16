@@ -1,4 +1,3 @@
-logging.level.de.malkusch.ha.shared.infrastructure.buderus: INFO
 niu:
    queryRate: PT2m
    circuit-breaker:
