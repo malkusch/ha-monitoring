@@ -4,6 +4,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.paho.mqttv5.client.IMqttMessageListener;
@@ -20,6 +22,7 @@ import org.eclipse.paho.mqttv5.common.MqttSubscription;
 import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
 
 import de.malkusch.ha.shared.infrastructure.mqtt.ResilientMqtt.ReconnectableMqtt;
+import de.malkusch.ha.shared.infrastructure.scheduler.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -28,13 +31,24 @@ final class PahoMqtt5 implements ReconnectableMqtt {
     private final MqttClient mqtt;
     private final String host;
     private final MqttConnectionOptions options;
+    private final ScheduledExecutorService executorService;
 
     public PahoMqtt5(String clientId, String host, int port, String user, String password, Duration timeout,
             Duration keepAlive, Duration sessionExpiryInterval) throws MqttException {
 
         this.host = host;
         var uri = String.format("ssl://%s:%s", host, port);
-        mqtt = new MqttClient(uri, clientId, new MemoryPersistence());
+
+        executorService = Executors.newScheduledThreadPool(10, r -> {
+            var thread = new Thread(r, "mqtt");
+            thread.setUncaughtExceptionHandler((t, e) -> {
+                log.error("Shutting down due to an error in mqtt", e);
+            });
+            thread.setDaemon(true);
+            return thread;
+        });
+
+        mqtt = new MqttClient(uri, clientId, new MemoryPersistence(), executorService);
         mqtt.setCallback(new MqttEventHandler());
 
         options = new MqttConnectionOptionsBuilder() //
@@ -154,12 +168,17 @@ final class PahoMqtt5 implements ReconnectableMqtt {
     }
 
     @Override
-    public void close() throws MqttException {
+    public void close() throws Exception {
         try {
             disconnect();
 
         } finally {
-            mqtt.close(true);
+            try {
+                mqtt.close(true);
+
+            } finally {
+                Schedulers.close(executorService);
+            }
         }
     }
 
