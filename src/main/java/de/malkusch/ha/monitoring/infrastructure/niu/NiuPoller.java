@@ -10,6 +10,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+import de.malkusch.ha.shared.infrastructure.async.AsyncService;
 import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenException;
 import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenedException;
 import de.malkusch.ha.shared.infrastructure.scheduler.Schedulers;
@@ -25,9 +26,11 @@ public class NiuPoller implements AutoCloseable {
 
     private final Duration rate;
     private final ScheduledExecutorService scheduler = singleThreadScheduler("niu");
+    private final AsyncService async;
 
-    NiuPoller(Niu niu, Duration rate) throws IOException {
+    NiuPoller(Niu niu, Duration rate, AsyncService async) throws IOException {
         this.rate = rate;
+        this.async = async;
 
         for (var vehicle : niu.vehicles()) {
             log.info("Polling NIU({}) with rate {}", vehicle, rate);
@@ -101,7 +104,7 @@ public class NiuPoller implements AutoCloseable {
     }
 
     private <T> void scheduleVehicleUpdates(String serialNumber, VehicleUpdates<T> updates) {
-        Runnable schedule = () -> {
+        Runnable task = () -> {
             try {
                 var result = updates.query().query(serialNumber);
                 for (var update : updates.updates) {
@@ -116,8 +119,9 @@ public class NiuPoller implements AutoCloseable {
                 log.error("Failed to update niu's metric", e);
             }
         };
-        schedule.run();
-        scheduler.scheduleAtFixedRate(schedule::run, rate.toSeconds(), rate.toSeconds(), SECONDS);
+
+        task.run();
+        scheduler.scheduleAtFixedRate(async.async(task), rate.toSeconds(), rate.toSeconds(), SECONDS);
     }
 
     private static Gauge gauge(Vehicle vehicle, String name, String... labels) {

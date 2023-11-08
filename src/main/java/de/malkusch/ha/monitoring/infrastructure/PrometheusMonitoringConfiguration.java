@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.malkusch.ha.monitoring.infrastructure.PrometheusProxyPoller.Mapping;
 import de.malkusch.ha.monitoring.infrastructure.SonnenPoller.DownTime;
 import de.malkusch.ha.monitoring.infrastructure.mqtt.MqttMonitoring;
+import de.malkusch.ha.shared.infrastructure.async.AsyncService;
 import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker;
 import de.malkusch.ha.shared.infrastructure.http.HttpClient;
 import de.malkusch.ha.shared.infrastructure.http.JdkHttpClient;
@@ -70,6 +71,7 @@ class PrometheusMonitoringConfiguration {
 
     private final MonitoringProperties properties;
     private final ObjectMapper mapper;
+    private final AsyncService async;
 
     @Bean
     public ServletRegistrationBean<MetricsServlet> prometheusServlet() {
@@ -113,7 +115,7 @@ class PrometheusMonitoringConfiguration {
         );
         var poller = proxyPoller(url, monitoringHttp(), mappings);
         poller = new SonnenPoller(poller, downTime);
-        return new ScheduledPoller(poller);
+        return new ScheduledPoller(poller, async);
     }
 
     @Bean
@@ -132,7 +134,7 @@ class PrometheusMonitoringConfiguration {
     @Bean
     @Scope(value = SCOPE_PROTOTYPE)
     ScheduledPoller proxy(String url, Collection<Mapping> mappings) {
-        return new ScheduledPoller(proxyPoller(url, monitoringHttp(), mappings));
+        return new ScheduledPoller(proxyPoller(url, monitoringHttp(), mappings), async);
     }
 
     @Bean
@@ -140,7 +142,7 @@ class PrometheusMonitoringConfiguration {
         var mappings = asList( //
                 mapping("/Body/Data/Site/P_PV", "inverter_production") //
         );
-        return new ScheduledPoller(new OfflinePoller(proxyPoller(properties.inverter, offlineHttp(), mappings)));
+        return new ScheduledPoller(new OfflinePoller(proxyPoller(properties.inverter, offlineHttp(), mappings)), async);
     }
 
     private Poller proxyPoller(String url, HttpClient http, Collection<Mapping> mappings) {
