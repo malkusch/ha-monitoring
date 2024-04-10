@@ -1,7 +1,6 @@
 package de.malkusch.ha.monitoring.infrastructure.mqtt;
 
 import static java.util.Arrays.asList;
-import static lombok.AccessLevel.PRIVATE;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -16,7 +15,7 @@ import de.malkusch.ha.shared.infrastructure.mqtt.Mqtt;
 import io.prometheus.client.Gauge;
 import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor(access = PRIVATE)
+@RequiredArgsConstructor
 public class MqttMonitoring<MESSAGE> {
 
     @RequiredArgsConstructor
