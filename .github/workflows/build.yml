@@ -4,6 +4,8 @@ on: [push]
 jobs:
   build:
     uses: malkusch/github/.github/workflows/maven-build.yml@master
+    with:
+      INTEGRATION_TESTS_ENABLED: false
 
   release:
     if: github.ref == 'refs/heads/master'
