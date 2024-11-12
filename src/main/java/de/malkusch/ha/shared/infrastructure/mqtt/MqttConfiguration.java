@@ -43,11 +43,6 @@ public class MqttConfiguration {
             log.warn("MQTT is disabled");
             return new NullMqtt();
         }
-
-        // var paho3 = new PahoMqtt(clientId() ,properties.host,
-        // properties.port, properties.user, properties.password,
-        // properties.timeout, properties.keepAlive);
-
         var paho5 = new PahoMqtt5(clientId(), properties.host, properties.port, properties.user, properties.password,
                 properties.timeout, properties.keepAlive, properties.sessionExpiryInterval);
         return new ResilientMqtt(paho5, properties.circuitBreaker, properties.keepAlive);
