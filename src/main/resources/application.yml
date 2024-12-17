@@ -1,4 +1,5 @@
 niu:
+   enabled: true
    queryRate: PT2m
    circuit-breaker:
       failure-threshold: 5
