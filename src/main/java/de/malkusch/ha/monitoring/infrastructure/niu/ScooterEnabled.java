@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
-@ConditionalOnProperty("scooter.enabled")
+@ConditionalOnProperty("niu.enabled")
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ScooterEnabled {
 }
