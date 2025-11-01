@@ -57,6 +57,7 @@ final class PahoMqtt5 implements ReconnectableMqtt {
                 .cleanStart(true) //
                 .sessionExpiryInterval(sessionExpiryInterval.toSeconds()) //
                 .connectionTimeout((int) timeout.toSeconds()) //
+                .automaticReconnectDelay((int) timeout.toSeconds() * 2, (int) timeout.toSeconds() * 3) //
                 .keepAliveInterval((int) keepAlive.toSeconds()) //
                 .password(password.getBytes(UTF_8)) //
                 .username(user) //
