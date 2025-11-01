@@ -67,12 +67,10 @@ class ResilientMqtt implements Mqtt, AutoCloseable {
         mqtt.onReconnect(this::resubscribeAll);
     }
 
-    public static interface ReconnectableMqtt extends Mqtt {
+    public interface ReconnectableMqtt extends Mqtt {
+        void onReconnect(Runnable onReconnect);
 
-        public void onReconnect(Runnable onReconnect);
-
-        public void reconnect() throws IOException;
-
+        void reconnect() throws IOException;
     }
 
     private final Queue<ResilientConsumer> subscriptions = new ConcurrentLinkedQueue<>();
