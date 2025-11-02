@@ -34,8 +34,8 @@ final class FileStateStorage implements StateStorage, AutoCloseable {
         }
     }
 
-    private static record KeyValue(String key, DeferredValue<String> value) {
-    };
+    private record KeyValue(String key, DeferredValue<String> value) {
+    }
 
     @Override
     public void persist(String key, Consumer<String> restore, DeferredValue<String> value) {

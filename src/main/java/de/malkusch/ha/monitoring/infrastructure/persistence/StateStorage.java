@@ -5,7 +5,7 @@ import java.util.function.Consumer;
 public interface StateStorage {
 
     @FunctionalInterface
-    public interface DeferredValue<T> {
+    interface DeferredValue<T> {
         T value();
     }
 
