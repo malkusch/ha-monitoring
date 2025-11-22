@@ -20,8 +20,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.malkusch.ha.monitoring.infrastructure.PrometheusProxyPoller.Mapping;
 import de.malkusch.ha.monitoring.infrastructure.SonnenPoller.DownTime;
@@ -34,6 +32,8 @@ import de.malkusch.ha.shared.infrastructure.http.RetryingHttpClient;
 import io.prometheus.client.servlet.jakarta.exporter.MetricsServlet;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @Configuration
 @RequiredArgsConstructor

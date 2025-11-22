@@ -1,13 +1,12 @@
 package de.malkusch.ha.monitoring.infrastructure;
 
-import java.io.IOException;
-import java.util.Collection;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import de.malkusch.ha.shared.infrastructure.http.HttpClient;
 import io.prometheus.client.Gauge;
 import lombok.RequiredArgsConstructor;
+import tools.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
+import java.util.Collection;
 
 @RequiredArgsConstructor
 final class PrometheusProxyPoller implements Poller {
@@ -34,7 +33,7 @@ final class PrometheusProxyPoller implements Poller {
         try (var response = http.get(url)) {
             var json = mapper.readTree(response.body);
             for (var mapping : mappings) {
-                var value = json.at(mapping.jsonPath).asDouble();
+                var value = json.at(mapping.jsonPath).asDouble(0);
                 mapping.gauge.set(value);
             }
 

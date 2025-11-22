@@ -1,19 +1,17 @@
 package de.malkusch.ha.monitoring.infrastructure.mqtt;
 
-import static java.util.Arrays.asList;
+import de.malkusch.ha.monitoring.infrastructure.persistence.GaugeFactory;
+import de.malkusch.ha.shared.infrastructure.mqtt.Mqtt;
+import io.prometheus.client.Gauge;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.function.Function;
 
-import org.springframework.stereotype.Component;
-
-import com.fasterxml.jackson.databind.JsonNode;
-
-import de.malkusch.ha.monitoring.infrastructure.persistence.GaugeFactory;
-import de.malkusch.ha.shared.infrastructure.mqtt.Mqtt;
-import io.prometheus.client.Gauge;
-import lombok.RequiredArgsConstructor;
+import static java.util.Arrays.asList;
 
 @RequiredArgsConstructor
 public class MqttMonitoring<MESSAGE> {

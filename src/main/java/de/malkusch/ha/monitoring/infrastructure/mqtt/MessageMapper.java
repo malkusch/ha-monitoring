@@ -1,18 +1,16 @@
 package de.malkusch.ha.monitoring.infrastructure.mqtt;
 
-import java.util.function.Function;
-
-import org.springframework.stereotype.Component;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker;
 import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenException;
 import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenedException;
 import de.malkusch.ha.shared.infrastructure.mqtt.MqttConfiguration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+
+import java.util.function.Function;
 
 interface MessageMapper<MESSAGE> {
 
