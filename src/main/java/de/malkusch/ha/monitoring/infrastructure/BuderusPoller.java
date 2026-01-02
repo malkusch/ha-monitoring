@@ -83,7 +83,7 @@ public class BuderusPoller implements AutoCloseable {
                 log.debug("Stop polling heater: Circuit breaker is open");
 
             } catch (Exception e) {
-                log.error("Failed to update heater's metric {}", gauge, e);
+                log.error("Failed to update heater's metric {}", path, e);
             }
         }, rate.toSeconds(), rate.toSeconds(), SECONDS);
     }

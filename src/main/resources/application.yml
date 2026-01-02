@@ -4,7 +4,7 @@ niu:
    circuit-breaker:
       failure-threshold: 5
       success-threshold: 2
-      delay: PT5M
+      delay: PT1H
 buderus:
    salt: 867845e97c4e29dce522b9a7d3a3e07b152bffadddbed7f5ffd842e9895ad1e4
    queryRate: PT1m
@@ -12,7 +12,7 @@ buderus:
    circuit-breaker:
       failure-threshold: 5
       success-threshold: 2
-      delay: PT5M
+      delay: PT1H
 sonnen:
    down-time:
       start: 00:45:00
@@ -25,7 +25,7 @@ monitoring:
    circuit-breaker:
       failure-threshold: 5
       success-threshold: 2
-      delay: PT10M
+      delay: PT1H
 mqtt:
    enabled: true
    resubscribe-rate: PT30m
