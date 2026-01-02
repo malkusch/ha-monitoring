@@ -1,3 +1,5 @@
+server.tomcat.threads.max: 5
+scheduler.pool-size: 3
 niu:
    enabled: true
    queryRate: PT2m
