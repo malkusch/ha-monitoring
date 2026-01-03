@@ -65,7 +65,7 @@ public final class CircuitBreaker<R> {
     public static class CircuitBreakerOpenException extends RuntimeException {
         private static final long serialVersionUID = -6011504260051976020L;
 
-        private final  CircuitBreaker<?> circuitBreaker;
+        private final CircuitBreaker<?> circuitBreaker;
 
         CircuitBreakerOpenException(String message, Throwable cause, CircuitBreaker<?> circuitBreaker) {
             super(message, cause);
@@ -94,15 +94,15 @@ public final class CircuitBreaker<R> {
     }
 
     private void onClose() {
-        log.info("Closed circuit breaker {}", name);
+        log.debug("Closed circuit breaker {}", name);
     }
 
     private void onHalfOpen() {
-        log.info("Half opened circuit breaker {}", name);
+        log.debug("Half opened circuit breaker {}", name);
     }
 
     private void onOpen() {
-        log.warn("Opened circuit breaker {}", name);
+        log.debug("Opened circuit breaker {}", name);
     }
 
     public void close() {
@@ -179,13 +179,13 @@ public final class CircuitBreaker<R> {
                 case OPEN -> throw new CircuitBreakerOpenException("Circuit breaker open", cause, this);
             }
         }
-        Object o = switch (cause) {
-            case dev.failsafe.CircuitBreakerOpenException f -> throw new CircuitBreakerOpenException("Circuit breaker open", f, this);
+        switch (cause) {
+            case dev.failsafe.CircuitBreakerOpenException f ->
+                    throw new CircuitBreakerOpenException("Circuit breaker open", f, this);
             case FailsafeException f -> throw (E1) f.getCause();
             case RuntimeException r -> throw r;
-            case null -> null;
             default -> throw (E1) cause;
-        };
+        }
     }
 
     @Override
