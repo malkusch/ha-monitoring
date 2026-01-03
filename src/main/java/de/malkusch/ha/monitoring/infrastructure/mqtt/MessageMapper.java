@@ -1,8 +1,6 @@
 package de.malkusch.ha.monitoring.infrastructure.mqtt;
 
 import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker;
-import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenException;
-import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenedException;
 import de.malkusch.ha.shared.infrastructure.mqtt.MqttConfiguration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +9,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.function.Function;
+
+import static de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreakerExceptionHandler.withCircuitBreakerLogging;
 
 interface MessageMapper<MESSAGE> {
 
@@ -49,12 +49,9 @@ interface MessageMapper<MESSAGE> {
                     var fixed = FILTER_NAN.apply(message);
                     var mapped = mapper.map(fixed);
                     try {
-                        throw e;
-
-                    } catch (CircuitBreakerOpenedException e2) {
-                        log.info("Message was repaired: Circuit breaker opened");
-
-                    } catch (CircuitBreakerOpenException e2) {
+                        withCircuitBreakerLogging(() -> {
+                            throw e;
+                        });
 
                     } catch (Throwable e2) {
                         log.warn("Message {} was repaired to {}: {}", message, fixed, e.getMessage());

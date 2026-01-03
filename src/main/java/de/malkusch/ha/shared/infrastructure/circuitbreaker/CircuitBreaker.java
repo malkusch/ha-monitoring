@@ -1,21 +1,23 @@
 package de.malkusch.ha.shared.infrastructure.circuitbreaker;
 
-import java.time.Duration;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import dev.failsafe.CircuitBreaker.State;
 import dev.failsafe.Failsafe;
 import dev.failsafe.FailsafeException;
 import dev.failsafe.FailsafeExecutor;
 import dev.failsafe.function.CheckedRunnable;
 import dev.failsafe.function.CheckedSupplier;
+import dev.failsafe.function.ContextualSupplier;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 public final class CircuitBreaker<R> {
 
-    private final FailsafeExecutor<R> breaker;
+    private final FailsafeExecutor<R> failsafe;
+    private final dev.failsafe.CircuitBreaker<R> circuitBreaker;
     private final int failureThreshold;
     private final int successThreshold;
     private final Duration delay;
@@ -23,21 +25,24 @@ public final class CircuitBreaker<R> {
 
     @SafeVarargs
     public CircuitBreaker(String name, int failureThreshold, int successThreshold, Duration delay,
-            Class<? extends Throwable>... exceptions) {
+                          Class<? extends Throwable>... exceptions) {
 
         this.name = name;
         this.failureThreshold = failureThreshold;
         this.successThreshold = successThreshold;
         this.delay = delay;
 
-        breaker = Failsafe.with(dev.failsafe.CircuitBreaker.<R> builder() //
+        circuitBreaker = dev.failsafe.CircuitBreaker.<R>builder() //
+                .handle(RegisterErrorException.class)
                 .handle(exceptions) //
                 .withFailureThreshold(failureThreshold) //
                 .withDelay(delay) //
                 .withSuccessThreshold(successThreshold) //
                 .onClose(it -> onClose()) //
-                .onOpen(it -> onOpen(it.getPreviousState())) //
-                .build());
+                .onOpen(it -> onOpen()) //
+                .onHalfOpen(it -> onHalfOpen()) //
+                .build();
+        failsafe = Failsafe.with(circuitBreaker);
     }
 
     @Data
@@ -60,58 +65,127 @@ public final class CircuitBreaker<R> {
     public static class CircuitBreakerOpenException extends RuntimeException {
         private static final long serialVersionUID = -6011504260051976020L;
 
-        CircuitBreakerOpenException(Throwable cause) {
-            super(cause);
+        private final  CircuitBreaker<?> circuitBreaker;
+
+        CircuitBreakerOpenException(String message, Throwable cause, CircuitBreaker<?> circuitBreaker) {
+            super(message, cause);
+            this.circuitBreaker = circuitBreaker;
+        }
+
+        public CircuitBreaker<?> circuitBreaker() {
+            return circuitBreaker;
         }
     }
 
     public static class CircuitBreakerOpenedException extends CircuitBreakerOpenException {
         private static final long serialVersionUID = -6011504260051976020L;
 
-        CircuitBreakerOpenedException(Throwable cause) {
-            super(cause);
+        CircuitBreakerOpenedException(String message, Throwable cause, CircuitBreaker<?> circuitBreaker) {
+            super(message, cause, circuitBreaker);
         }
     }
 
-    private final AtomicBoolean throwOpened = new AtomicBoolean(true);
+    public static class CircuitBreakerHalfOpenException extends CircuitBreakerOpenException {
+        private static final long serialVersionUID = -6011504260051976020L;
+
+        CircuitBreakerHalfOpenException(String message, Throwable cause, CircuitBreaker<?> circuitBreaker) {
+            super(message, cause, circuitBreaker);
+        }
+    }
 
     private void onClose() {
-        throwOpened.set(true);
         log.info("Closed circuit breaker {}", name);
     }
 
-    private void onOpen(State previousState) {
-        if (previousState == State.CLOSED) {
-            log.warn("Opened circuit breaker {}", name);
+    private void onHalfOpen() {
+        log.info("Half opened circuit breaker {}", name);
+    }
+
+    private void onOpen() {
+        log.warn("Opened circuit breaker {}", name);
+    }
+
+    public void close() {
+        circuitBreaker.close();
+    }
+
+    public boolean isClosed() {
+        return circuitBreaker.isClosed();
+    }
+
+    public boolean isOpen() {
+        return circuitBreaker.isOpen();
+    }
+
+    public boolean isHalfOpen() {
+        return circuitBreaker.isHalfOpen();
+    }
+
+    private static final class RegisterErrorException extends RuntimeException {
+    }
+
+    private static final RegisterErrorException REGISTER_ERROR = new RegisterErrorException();
+
+    public <E1 extends Throwable, E2 extends Throwable> void error(CheckedRunnable runnable)
+            throws E1, E2, CircuitBreakerOpenException {
+
+        try {
+            get(it -> {
+                runnable.run();
+                throw REGISTER_ERROR;
+            });
+        } catch (RegisterErrorException ignored) {
+
         }
     }
 
     public <E1 extends Throwable, E2 extends Throwable, T extends R> T get(CheckedSupplier<T> supplier)
             throws E1, E2, CircuitBreakerOpenException {
 
+        return get(it -> supplier.get());
+    }
+
+    private <E1 extends Throwable, E2 extends Throwable, T extends R> T get(ContextualSupplier<T, T> supplier)
+            throws E1, E2, CircuitBreakerOpenException {
+
+        AtomicReference<State> previousState = new AtomicReference<>(circuitBreaker.getState());
         try {
-            return breaker.get(supplier);
+            return failsafe.get(it -> {
+                previousState.set(circuitBreaker.getState());
+                return supplier.get(it);
+            });
 
-        } catch (dev.failsafe.CircuitBreakerOpenException e) {
-            if (throwOpened.compareAndExchange(true, false)) {
-                throw new CircuitBreakerOpenedException(e.getCause());
-            }
-            throw new CircuitBreakerOpenException(e.getCause());
-
-        } catch (FailsafeException e) {
-            @SuppressWarnings("unchecked")
-            var cause = (E1) e.getCause();
-            throw cause;
+        } catch (Throwable e) {
+            this.<E1>throwCircuitBreakerException(previousState.get(), e);
+            throw new IllegalStateException(e);
         }
     }
 
     public <E1 extends Throwable, E2 extends Throwable> void run(CheckedRunnable operation)
             throws E1, E2, CircuitBreakerOpenException {
 
-        get(() -> {
+        this.<E1, E2, R>get(it -> {
             operation.run();
             return null;
         });
+    }
+
+    private <E1 extends Throwable> void throwCircuitBreakerException(State previousState, Throwable cause) throws E1, CircuitBreakerOpenException {
+        var state = circuitBreaker.getState();
+        if (state == State.OPEN) {
+            switch (previousState) {
+                case HALF_OPEN -> throw new CircuitBreakerHalfOpenException("Circuit breaker half open", cause, this);
+                case CLOSED -> throw new CircuitBreakerOpenedException("Circuit breaker opened", cause, this);
+                case OPEN -> throw new CircuitBreakerOpenException("Circuit breaker open", cause, this);
+            }
+        }
+        Object o = switch (cause) {
+            case dev.failsafe.CircuitBreakerOpenException f -> throw new CircuitBreakerOpenException("Circuit breaker open", f, this);
+            case FailsafeException f -> throw (E1) f.getCause();
+            case RuntimeException r -> throw r;
+            case null -> null;
+            default -> throw (E1) cause;
+        };
     }
 
     @Override

@@ -1,14 +1,14 @@
 package de.malkusch.ha.monitoring.infrastructure;
 
-import java.io.IOException;
-import java.net.http.HttpTimeoutException;
-
-import org.springframework.scheduling.annotation.Scheduled;
-
 import de.malkusch.ha.shared.infrastructure.async.AsyncService;
+import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerHalfOpenException;
 import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenException;
 import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenedException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
+
+import java.io.IOException;
+import java.net.http.HttpTimeoutException;
 
 @Slf4j
 final class ScheduledPoller implements Poller {
@@ -30,6 +30,9 @@ final class ScheduledPoller implements Poller {
 
         } catch (CircuitBreakerOpenedException e) {
             log.warn("Stop polling metric {}: Open circuit breaker", poller);
+
+        } catch (CircuitBreakerHalfOpenException e) {
+            log.warn("Failed polling metric {}: {}", poller, e.getMessage());
 
         } catch (CircuitBreakerOpenException e) {
 

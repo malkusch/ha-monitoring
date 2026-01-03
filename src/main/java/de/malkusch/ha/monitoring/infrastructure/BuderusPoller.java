@@ -1,21 +1,19 @@
 package de.malkusch.ha.monitoring.infrastructure;
 
-import static de.malkusch.ha.shared.infrastructure.scheduler.Schedulers.singleThreadScheduler;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import de.malkusch.ha.shared.infrastructure.buderus.Heater;
+import de.malkusch.ha.shared.infrastructure.scheduler.Schedulers;
+import io.prometheus.client.Gauge;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import de.malkusch.ha.shared.infrastructure.buderus.Heater;
-import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenException;
-import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenedException;
-import de.malkusch.ha.shared.infrastructure.scheduler.Schedulers;
-import io.prometheus.client.Gauge;
-import lombok.extern.slf4j.Slf4j;
+import static de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreakerExceptionHandler.withCircuitBreakerLogging;
+import static de.malkusch.ha.shared.infrastructure.scheduler.Schedulers.singleThreadScheduler;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 @Slf4j
 @Service
@@ -74,13 +72,7 @@ public class BuderusPoller implements AutoCloseable {
         update.call();
         scheduler.scheduleAtFixedRate(() -> {
             try {
-                update.call();
-
-            } catch (CircuitBreakerOpenedException e) {
-                log.warn("Stop polling heater: Open circuit breaker");
-
-            } catch (CircuitBreakerOpenException e) {
-                log.debug("Stop polling heater: Circuit breaker is open");
+                withCircuitBreakerLogging(update::call);
 
             } catch (Exception e) {
                 log.error("Failed to update heater's metric {}", path, e);

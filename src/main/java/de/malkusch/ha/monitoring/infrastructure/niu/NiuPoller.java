@@ -1,7 +1,13 @@
 package de.malkusch.ha.monitoring.infrastructure.niu;
 
-import static de.malkusch.ha.shared.infrastructure.scheduler.Schedulers.singleThreadScheduler;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import de.malkusch.ha.shared.infrastructure.async.AsyncService;
+import de.malkusch.ha.shared.infrastructure.scheduler.Schedulers;
+import de.malkusch.niu.Niu.BatteryInfo;
+import de.malkusch.niu.Niu.Odometer;
+import de.malkusch.niu.Niu.Vehicle;
+import de.malkusch.niu.Niu.VehicleInfo;
+import io.prometheus.client.Gauge;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -10,16 +16,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-import de.malkusch.ha.shared.infrastructure.async.AsyncService;
-import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenException;
-import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenedException;
-import de.malkusch.ha.shared.infrastructure.scheduler.Schedulers;
-import de.malkusch.niu.Niu.BatteryInfo;
-import de.malkusch.niu.Niu.Odometer;
-import de.malkusch.niu.Niu.Vehicle;
-import de.malkusch.niu.Niu.VehicleInfo;
-import io.prometheus.client.Gauge;
-import lombok.extern.slf4j.Slf4j;
+import static de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreakerExceptionHandler.withCircuitBreakerLogging;
+import static de.malkusch.ha.shared.infrastructure.scheduler.Schedulers.singleThreadScheduler;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 @Slf4j
 public class NiuPoller implements AutoCloseable {
@@ -106,15 +105,12 @@ public class NiuPoller implements AutoCloseable {
     private <T> void scheduleVehicleUpdates(String serialNumber, VehicleUpdates<T> updates) {
         Runnable task = () -> {
             try {
-                var result = updates.query().query(serialNumber);
-                for (var update : updates.updates) {
-                    update.update.accept(result, update.gauge);
-                }
-            } catch (CircuitBreakerOpenedException e) {
-                log.warn("Stop polling niu: Open circuit breaker");
-
-            } catch (CircuitBreakerOpenException e) {
-
+                withCircuitBreakerLogging(() -> {
+                    var result = updates.query().query(serialNumber);
+                    for (var update : updates.updates) {
+                        update.update.accept(result, update.gauge);
+                    }
+                });
             } catch (Exception e) {
                 log.error("Failed to update niu's metric", e);
             }

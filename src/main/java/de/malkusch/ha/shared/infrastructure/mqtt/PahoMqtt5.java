@@ -89,8 +89,8 @@ final class PahoMqtt5 implements ReconnectableMqtt {
             if (mqtt.isConnected()) {
                 return;
             }
+            log.info("Connecting {}", this);
             mqtt.connect(options);
-            log.info("Connected {}", this);
 
         } catch (MqttException e) {
             throw new IOException("Couldn't connect to " + this, e);
@@ -101,9 +101,9 @@ final class PahoMqtt5 implements ReconnectableMqtt {
     public void reconnect() throws IOException {
         try {
             disconnect();
+            log.info("Reconnecting {}", this);
             nextReconnect.set(true);
             mqtt.reconnect();
-            log.info("Reconnected {}", this);
 
         } catch (MqttException e) {
             throw new IOException("Couldn't reconnect to " + this, e);
@@ -141,7 +141,7 @@ final class PahoMqtt5 implements ReconnectableMqtt {
 
         @Override
         public void disconnected(MqttDisconnectResponse disconnectResponse) {
-            log.warn("Disconnected: {}", disconnectResponse.getReasonString());
+            log.warn("Disconnected: {}", disconnectResponse.getReasonString(), disconnectResponse.getException());
         }
 
         @Override

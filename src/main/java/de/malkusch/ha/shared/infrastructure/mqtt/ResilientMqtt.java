@@ -1,6 +1,11 @@
 package de.malkusch.ha.shared.infrastructure.mqtt;
 
-import static de.malkusch.ha.shared.infrastructure.DateUtil.formatTime;
+import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker;
+import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerHalfOpenException;
+import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenException;
+import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenedException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -8,12 +13,8 @@ import java.time.Instant;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import org.springframework.scheduling.annotation.Scheduled;
-
-import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker;
-import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenException;
-import de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker.CircuitBreakerOpenedException;
-import lombok.extern.slf4j.Slf4j;
+import static de.malkusch.ha.shared.infrastructure.DateUtil.formatTime;
+import static de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreakerExceptionHandler.withCircuitBreakerLogging;
 
 @Slf4j
 class ResilientMqtt implements Mqtt, AutoCloseable {
@@ -38,13 +39,7 @@ class ResilientMqtt implements Mqtt, AutoCloseable {
             lastMessage = Instant.now();
             log.debug("Received message for {}", topic);
             try {
-                circuitBreaker.run(() -> consumer.consume(message));
-
-            } catch (CircuitBreakerOpenedException e) {
-                log.warn("Failed consuming message from {}: Circuit breaker opened", topic, e.getCause());
-
-            } catch (CircuitBreakerOpenException e) {
-                log.info("Failed consuming message from {}: Circuit breaker open", topic);
+                withCircuitBreakerLogging(() -> circuitBreaker.run(() -> consumer.consume(message)));
 
             } catch (Throwable e) {
                 log.warn("Failed consuming message from {}: {}", topic, message, e);
@@ -64,7 +59,7 @@ class ResilientMqtt implements Mqtt, AutoCloseable {
 
         log.info("Configured MQTT with {}", subscribeCircuitBreaker);
 
-        mqtt.onReconnect(this::resubscribeAll);
+        mqtt.onReconnect(this::onReconnect);
     }
 
     public interface ReconnectableMqtt extends Mqtt {
@@ -102,7 +97,10 @@ class ResilientMqtt implements Mqtt, AutoCloseable {
             return true;
 
         } catch (CircuitBreakerOpenedException e) {
-            log.warn("Subscribing {} failed: Circuit breaker opened", consumer, e.getCause());
+            log.warn("Stop subscribing {}: Circuit breaker opened", consumer);
+
+        } catch (CircuitBreakerHalfOpenException e) {
+            log.warn("Subscribing {} failed: {}", consumer, e.getMessage());
 
         } catch (CircuitBreakerOpenException e) {
             log.info("Subscribing {} failed: Circuit breaker open", consumer);
@@ -137,9 +135,16 @@ class ResilientMqtt implements Mqtt, AutoCloseable {
         if (Instant.now().isBefore(threshold)) {
             return;
         }
-        log.warn("MQTT seems inactive. Last message was at {}.", formatTime(lastMessage));
-        log.info("Reconnecting {}", mqtt);
-        mqtt.reconnect();
+        withCircuitBreakerLogging(() ->
+                subscribeCircuitBreaker.error(() -> {
+                    log.warn("MQTT seems inactive. Last message was at {}.", formatTime(lastMessage));
+                    mqtt.reconnect();
+                }));
+    }
+
+    void onReconnect() {
+        subscribeCircuitBreaker.close();
+        resubscribeAll();
     }
 
     @Override
