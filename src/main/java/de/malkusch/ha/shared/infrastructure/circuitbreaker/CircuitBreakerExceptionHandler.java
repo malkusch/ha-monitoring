@@ -13,16 +13,16 @@ import static de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreaker
 @Slf4j
 public class CircuitBreakerExceptionHandler {
 
-    public static class Builder<E extends Throwable, T extends Throwable> {
+    public static class Builder<E extends Throwable> {
 
         private ExceptionHandler<CircuitBreakerOpenedException> onOpened = empty();
         private ExceptionHandler<CircuitBreakerOpenException> onOpen = empty();
         private ExceptionHandler<CircuitBreakerHalfOpenException> onHalfOpen = empty();
-        private CheckedExceptionHandler<? super Throwable, T> catchAll = CheckedExceptionHandler.empty();
+        private ExceptionHandler<? super Throwable> catchAll = empty();
         private Logger logger = log;
 
-        public static <E extends Throwable> Builder<E, ? extends RuntimeException> defaultLogging() {
-            return new Builder<E, RuntimeException>()
+        public static <E extends Throwable> Builder<E> defaultLogging() {
+            return new Builder<E>()
                     .onOpened((log, e) -> log.warn("Circuit Breaker {} opened: {}", e.circuitBreaker(), causeMessage(e)))
                     .onOpen((log, e) -> log.debug("Circuit Breaker {} open: {}", e.circuitBreaker(), causeMessage(e)))
                     .onHalfOpen((log, e) -> log.warn("Circuit Breaker {} half open: {}", e.circuitBreaker(), causeMessage(e)))
@@ -46,52 +46,52 @@ public class CircuitBreakerExceptionHandler {
             return logger;
         }
 
-        public Builder<E, T> logger(Logger logger) {
+        public Builder<E> logger(Logger logger) {
             this.logger = logger;
             return this;
         }
 
-        public Builder<E, T> onOpened(ExceptionHandler<CircuitBreakerOpenedException> onOpened) {
+        public Builder<E> onOpened(ExceptionHandler<CircuitBreakerOpenedException> onOpened) {
             this.onOpened = onOpened;
             return this;
         }
 
-        public Builder<E, T> onOpened(LoggingHandler<CircuitBreakerOpenedException> logging) {
+        public Builder<E> onOpened(LoggingHandler<CircuitBreakerOpenedException> logging) {
             return onOpened(logging(logging));
         }
 
-        public Builder<E, T> onOpen(ExceptionHandler<CircuitBreakerOpenException> onOpen) {
+        public Builder<E> onOpen(ExceptionHandler<CircuitBreakerOpenException> onOpen) {
             this.onOpen = onOpen;
             return this;
         }
 
-        public Builder<E, T> onOpen(LoggingHandler<CircuitBreakerOpenException> logging) {
+        public Builder<E> onOpen(LoggingHandler<CircuitBreakerOpenException> logging) {
             return onOpen(logging(logging));
         }
 
-        public Builder<E, T> onHalfOpen(ExceptionHandler<CircuitBreakerHalfOpenException> onHalfOpen) {
+        public Builder<E> onHalfOpen(ExceptionHandler<CircuitBreakerHalfOpenException> onHalfOpen) {
             this.onHalfOpen = onHalfOpen;
             return this;
         }
 
-        public Builder<E, T> onHalfOpen(LoggingHandler<CircuitBreakerHalfOpenException> logging) {
+        public Builder<E> onHalfOpen(LoggingHandler<CircuitBreakerHalfOpenException> logging) {
             return onHalfOpen(logging(logging));
         }
 
-        public Builder<E, T> catchAll(CheckedExceptionHandler<? super Throwable, T> catchAll) {
+        public Builder<E> catchAll(ExceptionHandler<? super Throwable> catchAll) {
             this.catchAll = catchAll;
             return this;
         }
 
-        public Builder<E, T> catchAll(LoggingHandler<? super Throwable> catchAll) {
-            return catchAll(logging(catchAll).checkedExceptionHandler());
+        public Builder<E> catchAll(LoggingHandler<? super Throwable> catchAll) {
+            return catchAll(logging(catchAll));
         }
 
         public CircuitBreakerLogging<E> buildLogging() {
             return new CircuitBreakerLogging<>(onOpened, onOpen, onHalfOpen);
         }
 
-        public Handler<E, ? extends RuntimeException> logAllExceptions(LoggingHandler<? super Throwable> catchAll) {
+        public SilentHandler<E> logAllExceptions(LoggingHandler<? super Throwable> catchAll) {
             var logger = buildLogging();
             return new SilentHandler<>(logger, logging(catchAll));
         }
@@ -108,11 +108,9 @@ public class CircuitBreakerExceptionHandler {
     }
 
     @FunctionalInterface
-    public interface ExceptionHandler<E extends Throwable> extends CheckedExceptionHandler<E, RuntimeException> {
+    public interface ExceptionHandler<E extends Throwable> {
 
-        default <T extends Throwable> CheckedExceptionHandler<E, T> checkedExceptionHandler() {
-            return this::handle;
-        }
+        void handle(E e);
 
         static <E extends Throwable> ExceptionHandler<E> empty() {
             return e -> {
@@ -120,28 +118,11 @@ public class CircuitBreakerExceptionHandler {
         }
     }
 
-    @FunctionalInterface
-    public interface CheckedExceptionHandler<E extends Throwable, T extends Throwable> {
-        void handle(E e) throws T;
-
-        static <E extends Throwable, T extends Throwable> CheckedExceptionHandler<E, T> empty() {
-            return e -> {
-            };
-        }
-    }
-
-    @FunctionalInterface
-    public interface Handler<T extends Throwable, T2 extends Throwable> {
-
-        void handle(Execution<T> execution) throws T2;
-
-    }
-
     @RequiredArgsConstructor
-    static class SilentHandler<E extends Throwable> implements Handler<E, RuntimeException> {
+    public static class SilentHandler<E extends Throwable> {
 
         private final CircuitBreakerLogging<E> logger;
-        private final CheckedExceptionHandler<? super Throwable, ? extends RuntimeException> catchAll;
+        private final ExceptionHandler<? super Throwable> catchAll;
 
         public void handle(Execution<E> execution) {
             try {
@@ -154,7 +135,7 @@ public class CircuitBreakerExceptionHandler {
     }
 
     @RequiredArgsConstructor
-    public static class CircuitBreakerLogging<E extends Throwable> implements Handler<E, E> {
+    public static class CircuitBreakerLogging<E extends Throwable> {
 
         private final ExceptionHandler<CircuitBreakerOpenedException> onOpened;
         private final ExceptionHandler<CircuitBreakerOpenException> onOpen;
