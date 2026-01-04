@@ -1,20 +1,16 @@
 package de.malkusch.ha.shared.infrastructure;
 
-import static java.time.ZoneId.systemDefault;
-import static java.time.ZoneOffset.UTC;
-import static java.util.Locale.ENGLISH;
-import static net.time4j.format.TextWidth.NARROW;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-
 import lombok.extern.slf4j.Slf4j;
 import net.time4j.PrettyTime;
+
+import java.time.*;
+import java.time.format.DateTimeFormatter;
+
+import static java.time.ZoneId.systemDefault;
+import static java.time.ZoneOffset.UTC;
+import static java.time.temporal.ChronoUnit.SECONDS;
+import static java.util.Locale.ENGLISH;
+import static net.time4j.format.TextWidth.NARROW;
 
 @Slf4j
 public class DateUtil {
@@ -59,7 +55,7 @@ public class DateUtil {
 
     public static String formatDuration(Duration duration) {
         try {
-            return DURATION_FORMATTER.print(duration, NARROW);
+            return DURATION_FORMATTER.print(duration.truncatedTo(SECONDS), NARROW);
 
         } catch (Exception e) {
             log.error("Error formating {}", duration, e);
