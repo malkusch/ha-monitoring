@@ -59,7 +59,7 @@ public class DateUtil {
 
     public static String formatDuration(Duration duration) {
         try {
-            return DURATION_FORMATTER.print(duration, NARROW);
+            return DURATION_FORMATTER.print(duration, NARROW, false, 3);
 
         } catch (Exception e) {
             log.error("Error formating {}", duration, e);
