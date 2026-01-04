@@ -14,7 +14,7 @@ final class CircuitBreakerPoller implements Poller {
 
     public CircuitBreakerPoller(CircuitBreaker.Properties properties, Poller poller) {
         this.poller = poller;
-        this.circuitBreaker = new CircuitBreaker<>(poller.toString(), properties, IOException.class);
+        this.circuitBreaker = new CircuitBreaker<>(poller.toString(), properties, Throwable.class);
         log.info("Configured {} with circuit-breaker: {}", poller, circuitBreaker);
     }
 

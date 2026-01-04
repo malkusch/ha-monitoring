@@ -1,6 +1,5 @@
 package de.malkusch.ha.monitoring.infrastructure.niu;
 
-import de.malkusch.ha.shared.infrastructure.async.AsyncService;
 import de.malkusch.ha.shared.infrastructure.scheduler.Schedulers;
 import de.malkusch.niu.Niu.BatteryInfo;
 import de.malkusch.niu.Niu.Odometer;
@@ -25,11 +24,9 @@ public class NiuPoller implements AutoCloseable {
 
     private final Duration rate;
     private final ScheduledExecutorService scheduler = singleThreadScheduler("niu");
-    private final AsyncService async;
 
-    NiuPoller(Niu niu, Duration rate, AsyncService async) throws IOException {
+    NiuPoller(Niu niu, Duration rate) throws IOException {
         this.rate = rate;
-        this.async = async;
 
         for (var vehicle : niu.vehicles()) {
             log.info("Polling NIU({}) with rate {}", vehicle, rate);
@@ -110,6 +107,7 @@ public class NiuPoller implements AutoCloseable {
                     for (var update : updates.updates) {
                         update.update.accept(result, update.gauge);
                     }
+                    log.debug("NIU updated");
                 });
             } catch (Exception e) {
                 log.error("Failed to update niu's metric", e);
@@ -117,7 +115,7 @@ public class NiuPoller implements AutoCloseable {
         };
 
         task.run();
-        scheduler.scheduleAtFixedRate(async.async(task), rate.toSeconds(), rate.toSeconds(), SECONDS);
+        scheduler.scheduleAtFixedRate(task, rate.toSeconds(), rate.toSeconds(), SECONDS);
     }
 
     private static Gauge gauge(Vehicle vehicle, String name, String... labels) {
