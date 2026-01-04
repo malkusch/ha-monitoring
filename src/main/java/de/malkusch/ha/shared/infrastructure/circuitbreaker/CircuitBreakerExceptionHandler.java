@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 
+import static de.malkusch.ha.shared.infrastructure.DateUtil.formatDuration;
 import static de.malkusch.ha.shared.infrastructure.circuitbreaker.CircuitBreakerExceptionHandler.ExceptionHandler.empty;
 
 @RequiredArgsConstructor
@@ -23,9 +24,9 @@ public class CircuitBreakerExceptionHandler {
 
         public static <E extends Throwable> Builder<E> defaultLogging() {
             return new Builder<E>()
-                    .onOpened((log, e) -> log.warn("Circuit Breaker {} opened: {}", e.circuitBreaker(), causeMessage(e)))
-                    .onOpen((log, e) -> log.debug("Circuit Breaker {} open: {}", e.circuitBreaker(), causeMessage(e)))
-                    .onHalfOpen((log, e) -> log.warn("Circuit Breaker {} half open: {}", e.circuitBreaker(), causeMessage(e)))
+                    .onOpened((log, e) -> log.warn("Circuit Breaker {} opened after {} failures. It will be open for {}: {}", e.circuitBreaker(), e.failures(), formatDuration(e.remainingDelay()), causeMessage(e)))
+                    .onOpen((log, e) -> log.debug("Circuit Breaker {} has {} failures and is open for another  {}: {}", e.circuitBreaker(), e.failures(), formatDuration(e.remainingDelay()), causeMessage(e)))
+                    .onHalfOpen((log, e) -> log.warn("Circuit Breaker {} has {} failures was half open and is now closed for {}: {}", e.circuitBreaker(), e.failures(), formatDuration(e.remainingDelay()), causeMessage(e)))
                     .catchAll((log, e) -> log.error("Error while circuit breaker is closed", e));
         }
 

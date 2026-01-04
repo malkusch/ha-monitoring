@@ -66,10 +66,22 @@ public final class CircuitBreaker<R> {
         private static final long serialVersionUID = -6011504260051976020L;
 
         private final CircuitBreaker<?> circuitBreaker;
+        private final Duration remainingDelay;
+        private final long failures;
 
         CircuitBreakerOpenException(String message, Throwable cause, CircuitBreaker<?> circuitBreaker) {
             super(message, cause);
             this.circuitBreaker = circuitBreaker;
+            remainingDelay = circuitBreaker.circuitBreaker.getRemainingDelay();
+            failures = circuitBreaker.circuitBreaker.getFailureCount();
+        }
+
+        public long failures() {
+            return failures;
+        }
+
+        public Duration remainingDelay() {
+            return remainingDelay;
         }
 
         public CircuitBreaker<?> circuitBreaker() {
