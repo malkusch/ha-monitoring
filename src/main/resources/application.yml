@@ -17,7 +17,7 @@ buderus:
       delay: PT1H
 sonnen:
    down-time:
-      start: 00:45:00
+      start: 00:00:00
       end: 01:10:00 
 monitoring:
    enabled: true
