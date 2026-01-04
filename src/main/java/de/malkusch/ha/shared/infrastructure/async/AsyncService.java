@@ -1,20 +1,20 @@
 package de.malkusch.ha.shared.infrastructure.async;
 
-import static java.lang.Thread.currentThread;
-
-import java.lang.Thread.Builder;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import lombok.extern.slf4j.Slf4j;
+import java.util.concurrent.ThreadFactory;
+
+import static java.lang.Thread.currentThread;
 
 @Service
 @Slf4j
 public final class AsyncService {
 
-    private final Builder.OfVirtual builder = Thread //
+    private final ThreadFactory factory = Thread //
             .ofVirtual() //
-            .uncaughtExceptionHandler((t, e) -> log.error("Uncaught exception in thread {}", t, e));
+            .uncaughtExceptionHandler((t, e) -> log.error("Uncaught exception in thread {}", t, e)) //
+            .factory();
 
     @FunctionalInterface
     public interface Task {
@@ -26,7 +26,7 @@ public final class AsyncService {
     }
 
     public void executeAsync(Task task) {
-        builder.start(() -> {
+        factory.newThread((() -> {
             try {
                 task.run();
 
@@ -36,6 +36,6 @@ public final class AsyncService {
             } catch (Throwable e) {
                 log.error("Error in async task", e);
             }
-        });
+        })).start();
     }
 }
