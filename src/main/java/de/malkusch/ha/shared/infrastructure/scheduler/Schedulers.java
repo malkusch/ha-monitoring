@@ -27,8 +27,7 @@ public final class Schedulers {
         return newSingleThreadScheduledExecutor(r -> {
             var thread = new Thread(r, name);
             thread.setUncaughtExceptionHandler((t, e) -> {
-                log.error("Shutting down due to an error in " + name, e);
-                exit(-1);
+                log.error("Uncaught exception in {} ", name, e);
             });
             thread.setDaemon(true);
             return thread;
